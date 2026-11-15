@@ -37,5 +37,7 @@ is type-erased (`void*` instance, `uint64_t` surface) and wired by the compositi
 - `pollEvents()` must not allocate in steady state; events are trivially copyable with inline
   UTF-8 text (`kMaxEventText`).
 - SDL reports logical and pixel resizes separately; translation collapses identical neighbors.
+- SDL3 is built without `ibus` (no D-Bus): Linux IME via IBus/Fcitx is not supported yet (see
+  the spec's implementation notes).
 - Tests use `VideoBackend::kHeadless` (SDL offscreen/dummy driver); headless windows never load
   Vulkan, so tests pass on machines without a Vulkan loader.

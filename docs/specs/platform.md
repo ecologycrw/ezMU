@@ -296,7 +296,11 @@ All tests run in CI on Windows and Linux without a display, using `VideoBackend:
   not `void*`), and is `nullptr` for non-Vulkan or headless windows.
 - Added `Window::mode()` and `Window::setLogicalSize()`; digit scancodes are `kDigit0`–`kDigit9`
   (clang-tidy flags `k0`/`kO` and `k1`/`kI` as confusable).
-- SDL3 comes from vcpkg with the `vulkan` feature.
+- SDL3 comes from vcpkg with default features off and `vulkan` (+ `x11`, `wayland` on Linux).
+  The default `ibus` feature is disabled: it pulls `dbus` → `libsystemd` (autotools build chain,
+  AFL/GPL-licensed dbus linked statically). Consequence: on Linux, IME works through X11 XIM and
+  Wayland text-input, but not through IBus/Fcitx over D-Bus. Revisit (follow-up) before Linux
+  IME matters.
 
 ## Implementation plan
 

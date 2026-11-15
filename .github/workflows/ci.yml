@@ -64,11 +64,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build g++-14 clang-19
-          # System development packages required by the vcpkg SDL3 port (X11, Wayland, IBus).
+          # System development packages required by the vcpkg SDL3 port (X11, Wayland).
           sudo apt-get install -y pkg-config libx11-dev libxext-dev libxrandr-dev libxcursor-dev \
             libxi-dev libxss-dev libxtst-dev libxfixes-dev libxinerama-dev libxft-dev \
-            libwayland-dev libxkbcommon-dev wayland-protocols libegl1-mesa-dev \
-            libibus-1.0-dev
+            libwayland-dev libxkbcommon-dev wayland-protocols libegl1-mesa-dev
 
       - name: Set up MSVC environment
         if: runner.os == 'Windows'
