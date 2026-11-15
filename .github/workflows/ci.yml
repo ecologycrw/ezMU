@@ -123,7 +123,16 @@ jobs:
       # Linux runs GPU tests on Mesa lavapipe and must not skip them; Windows runners have no
       # Vulkan driver, so GPU tests skip there (ADR 0020).
       - name: Test
+        shell: bash
         env:
           EZMU_REQUIRE_GPU: ${{ runner.os == 'Linux' && '1' || '' }}
           LSAN_OPTIONS: suppressions=${{ github.workspace }}/.github/lsan-suppressions.txt
-        run: ctest --preset ${{ matrix.preset }}
+        run: |
+          set -o pipefail
+          ctest --preset "${{ matrix.preset }}" 2>&1 | tee "$RUNNER_TEMP/ctest.log"
+
+      # Failed tests' output as annotations (readable on the run page and via the public API).
+      - name: Annotate test failures
+        if: failure()
+        shell: bash
+        run: bash .github/scripts/annotate-test-failures.sh "$RUNNER_TEMP/ctest.log"
