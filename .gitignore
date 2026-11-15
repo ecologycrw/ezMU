@@ -1,0 +1,26 @@
+# Build output
+/build/
+/out/
+/install/
+
+# vcpkg (manifest mode)
+/vcpkg_installed/
+
+# IDEs
+/.vs/
+/.vscode/
+/.idea/
+*.user
+*.suo
+CMakeUserPresets.json
+
+# Generated / tooling
+compile_commands.json
+*.log
+
+# Claude Code local-only settings
+/.claude/settings.local.json
+
+# OS
+Thumbs.db
+.DS_Store
