@@ -44,6 +44,9 @@ This document is the map of ezMU. The reasoning behind each part is in the
    referenced by module build files. Checked by
    [scripts/checks/check_rules.cmake](../../scripts/checks/check_rules.cmake).
 5. Tools and Framework use only public APIs.
+6. The INTERFACE target `ezmu::engine` (declared with `ezmu_add_aggregate`) bundles every
+   Engine module for executables and external consumers. It is not a module, and modules may
+   not depend on it: they declare the specific modules they use.
 
 ## Planned modules
 

@@ -13,10 +13,16 @@
 #
 #   ezmu_add_executable(NAME <name> LAYER <5|6> SOURCES <files...> [DEPS <targets...>])
 #
+#   ezmu_add_aggregate(NAME <name> LAYER <0..6> MODULES <ezmu modules...>)
+#                                   # INTERFACE target ezmu_<name>, alias ezmu::<name>
+#
 # Rules:
 #   * An ezmu module may depend only on ezmu modules of a LOWER layer, unless the dependency is
 #     listed in ALLOW_SAME_LAYER (same layer only). Violations fail at configure time.
 #   * Dependencies must already be defined: add_subdirectory() lower layers first.
+#   * Aggregates (e.g. ezmu::engine) bundle modules for executables and external consumers.
+#     They are not modules: a module must depend on the specific modules it uses, never on an
+#     aggregate. Violations fail at configure time.
 #   * Non-ezmu targets (third-party imported targets such as SDL3::SDL3) are not layer-checked;
 #     their ownership is governed by ADR 0008.
 
@@ -59,6 +65,22 @@ function(_ezmu_check_deps owner owner_layer allow_same_layer)
     endforeach()
 endfunction()
 
+# Fails if any dependency of `owner` is an aggregate (modules depend on specific modules).
+function(_ezmu_reject_aggregates owner)
+    foreach(dep IN LISTS ARGN)
+        if(NOT dep MATCHES "^ezmu::" OR NOT TARGET "${dep}")
+            continue()
+        endif()
+        string(REPLACE "ezmu::" "" dep_name "${dep}")
+        get_target_property(is_aggregate "ezmu_${dep_name}" EZMU_AGGREGATE)
+        if(is_aggregate)
+            message(FATAL_ERROR
+                "[ezMU] '${owner}' depends on aggregate '${dep}'. Modules must depend on the "
+                "specific modules they use; aggregates are for executables and external users.")
+        endif()
+    endforeach()
+endfunction()
+
 function(ezmu_add_module)
     cmake_parse_arguments(PARSE_ARGV 0 ARG "INTERFACE" "NAME;LAYER"
         "SOURCES;PUBLIC_DEPS;PRIVATE_DEPS;ALLOW_SAME_LAYER")
@@ -73,6 +95,7 @@ function(ezmu_add_module)
     set(target "ezmu_${ARG_NAME}")
     _ezmu_check_deps("ezmu::${ARG_NAME}" ${ARG_LAYER} "${ARG_ALLOW_SAME_LAYER}"
         ${ARG_PUBLIC_DEPS} ${ARG_PRIVATE_DEPS})
+    _ezmu_reject_aggregates("ezmu::${ARG_NAME}" ${ARG_PUBLIC_DEPS} ${ARG_PRIVATE_DEPS})
 
     if(ARG_INTERFACE)
         add_library(${target} INTERFACE)
@@ -120,4 +143,37 @@ function(ezmu_add_executable)
     target_link_libraries(${ARG_NAME} PRIVATE ${ARG_DEPS})
     set_target_properties(${ARG_NAME} PROPERTIES EZMU_LAYER ${ARG_LAYER})
     _ezmu_apply_defaults(${ARG_NAME})
+endfunction()
+
+function(ezmu_add_aggregate)
+    cmake_parse_arguments(PARSE_ARGV 0 ARG "" "NAME;LAYER" "MODULES")
+    if(NOT ARG_NAME)
+        message(FATAL_ERROR "[ezMU] ezmu_add_aggregate: NAME is required.")
+    endif()
+    if(NOT ARG_LAYER MATCHES "^[0-6]$")
+        message(FATAL_ERROR "[ezMU] ezmu_add_aggregate(${ARG_NAME}): LAYER must be 0..6.")
+    endif()
+
+    set(module_names "")
+    foreach(module IN LISTS ARG_MODULES)
+        if(NOT module MATCHES "^ezmu::")
+            message(FATAL_ERROR
+                "[ezMU] ezmu_add_aggregate(${ARG_NAME}): '${module}' is not an ezmu:: module.")
+        endif()
+        string(REPLACE "ezmu::" "" module_name "${module}")
+        list(APPEND module_names "${module_name}")
+    endforeach()
+
+    # An aggregate may bundle modules of its own layer, so all of them are allowed same-layer.
+    _ezmu_check_deps("ezmu::${ARG_NAME}" ${ARG_LAYER} "${module_names}" ${ARG_MODULES})
+    _ezmu_reject_aggregates("ezmu::${ARG_NAME}" ${ARG_MODULES})
+
+    set(target "ezmu_${ARG_NAME}")
+    add_library(${target} INTERFACE)
+    target_link_libraries(${target} INTERFACE ${ARG_MODULES})
+    add_library("ezmu::${ARG_NAME}" ALIAS ${target})
+    set_target_properties(${target} PROPERTIES
+        EZMU_LAYER ${ARG_LAYER}
+        EZMU_AGGREGATE TRUE
+        EXPORT_NAME ${ARG_NAME})
 endfunction()

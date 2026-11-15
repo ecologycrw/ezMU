@@ -4,7 +4,7 @@ ezmu_add_executable(
     NAME ezmu_hello
     LAYER 6
     SOURCES main.cpp
-    DEPS ezmu::foundation)
+    DEPS ezmu::engine)
 
 if(EZMU_BUILD_TESTS)
     add_test(NAME samples.hello COMMAND ezmu_hello)

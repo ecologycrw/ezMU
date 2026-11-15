@@ -16,6 +16,10 @@ Source: ADR 0009, ADR 0011.
   module directly — the layer check would be skipped.
 - Dependencies between ezMU modules use the `ezmu::<name>` alias. Same-layer dependencies must be
   listed in `ALLOW_SAME_LAYER`.
+- Aggregates (`ezmu_add_aggregate`): `ezmu::engine` bundles every Engine module (defined at the
+  end of `engine/CMakeLists.txt`; add each new engine module to it). Executables (samples,
+  tools) and external consumers link aggregates; modules never do (configure fails). There is
+  no `engine/engine` module. `ezmu::framework` will follow the same pattern.
 - Third-party libraries: `find_package(<Pkg> CONFIG REQUIRED)` + imported targets. Never mention
   vcpkg in module build files (the `architecture.rules` test fails).
 - Do not add global compile flags in module files; warnings and sanitizers come from the helpers.
