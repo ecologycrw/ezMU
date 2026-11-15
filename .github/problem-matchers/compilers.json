@@ -1,0 +1,40 @@
+{
+  "problemMatcher": [
+    {
+      "owner": "ezmu-gcc-clang",
+      "pattern": [
+        {
+          "regexp": "^(.+?):(\\d+):(\\d+):\\s+(?:fatal\\s+)?(error|warning):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      ]
+    },
+    {
+      "owner": "ezmu-msvc",
+      "pattern": [
+        {
+          "regexp": "^(?:\\s*\\d+>)?([^\\s].*?)\\((\\d+)(?:,(\\d+))?\\)\\s*:\\s+(?:fatal\\s+)?(error|warning)\\s+(\\w{1,2}\\d+):\\s*(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "code": 5,
+          "message": 6
+        }
+      ]
+    },
+    {
+      "owner": "ezmu-linker-cmake",
+      "pattern": [
+        {
+          "regexp": "^(?:.*?:\\s+)?((?:undefined reference|LINK : fatal error|error LNK\\d+|CMake Error).*)$",
+          "message": 1
+        }
+      ]
+    }
+  ]
+}

@@ -21,9 +21,9 @@ jobs:
     name: Format and architecture rules
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -52,7 +52,12 @@ jobs:
           - { os: ubuntu-24.04, preset: linux-gcc-asan, cxx: g++-14 }
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      # Surface compiler/linker errors as annotations, readable without access to the logs.
+      - name: Register problem matchers
+        shell: bash
+        run: echo "::add-matcher::.github/problem-matchers/compilers.json"
 
       - name: Install Linux toolchain
         if: runner.os == 'Linux'
