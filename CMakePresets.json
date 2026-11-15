@@ -1,0 +1,115 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 28, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "EZMU_BUILD_TESTS": "ON",
+        "EZMU_BUILD_SAMPLES": "ON"
+      }
+    },
+    {
+      "name": "windows-base",
+      "hidden": true,
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
+      "architecture": { "value": "x64", "strategy": "external" },
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "cl",
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static-md"
+      }
+    },
+    {
+      "name": "linux-base",
+      "hidden": true,
+      "inherits": "base",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" },
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-linux"
+      }
+    },
+    {
+      "name": "linux-clang-base",
+      "hidden": true,
+      "inherits": "linux-base",
+      "cacheVariables": { "CMAKE_CXX_COMPILER": "clang++" }
+    },
+    {
+      "name": "linux-gcc-base",
+      "hidden": true,
+      "inherits": "linux-base",
+      "cacheVariables": { "CMAKE_CXX_COMPILER": "g++" }
+    },
+    {
+      "name": "windows-msvc-debug",
+      "displayName": "Windows MSVC Debug",
+      "inherits": "windows-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "windows-msvc-release",
+      "displayName": "Windows MSVC Release",
+      "inherits": "windows-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "windows-msvc-asan",
+      "displayName": "Windows MSVC Debug + ASan",
+      "inherits": "windows-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "EZMU_ENABLE_SANITIZERS": "ON" }
+    },
+    {
+      "name": "linux-clang-debug",
+      "displayName": "Linux Clang Debug",
+      "inherits": "linux-clang-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "linux-clang-asan",
+      "displayName": "Linux Clang Debug + ASan/UBSan",
+      "inherits": "linux-clang-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "EZMU_ENABLE_SANITIZERS": "ON" }
+    },
+    {
+      "name": "linux-gcc-debug",
+      "displayName": "Linux GCC Debug",
+      "inherits": "linux-gcc-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "linux-gcc-asan",
+      "displayName": "Linux GCC Debug + ASan/UBSan",
+      "inherits": "linux-gcc-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "EZMU_ENABLE_SANITIZERS": "ON" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "windows-msvc-debug", "configurePreset": "windows-msvc-debug" },
+    { "name": "windows-msvc-release", "configurePreset": "windows-msvc-release" },
+    { "name": "windows-msvc-asan", "configurePreset": "windows-msvc-asan" },
+    { "name": "linux-clang-debug", "configurePreset": "linux-clang-debug" },
+    { "name": "linux-clang-asan", "configurePreset": "linux-clang-asan" },
+    { "name": "linux-gcc-debug", "configurePreset": "linux-gcc-debug" },
+    { "name": "linux-gcc-asan", "configurePreset": "linux-gcc-asan" }
+  ],
+  "testPresets": [
+    {
+      "name": "test-base",
+      "hidden": true,
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error", "stopOnFailure": false }
+    },
+    { "name": "windows-msvc-debug", "inherits": "test-base", "configurePreset": "windows-msvc-debug" },
+    { "name": "windows-msvc-release", "inherits": "test-base", "configurePreset": "windows-msvc-release" },
+    { "name": "windows-msvc-asan", "inherits": "test-base", "configurePreset": "windows-msvc-asan" },
+    { "name": "linux-clang-debug", "inherits": "test-base", "configurePreset": "linux-clang-debug" },
+    { "name": "linux-clang-asan", "inherits": "test-base", "configurePreset": "linux-clang-asan" },
+    { "name": "linux-gcc-debug", "inherits": "test-base", "configurePreset": "linux-gcc-debug" },
+    { "name": "linux-gcc-asan", "inherits": "test-base", "configurePreset": "linux-gcc-asan" }
+  ]
+}
