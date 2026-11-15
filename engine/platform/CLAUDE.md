@@ -32,6 +32,8 @@ is type-erased (`void*` instance, `uint64_t` surface) and wired by the compositi
 
 - Main thread only (asserted), except `Clock`. One `Platform` at a time (`create` fails).
 - Destroy windows before the Platform, and Vulkan surfaces (RHI swapchain) before their window.
+  Also destroy an RHI Device loaded through `vulkanGetInstanceProcAddr()` before the last Vulkan
+  window: SDL unloads the Vulkan library with it.
 - `Scancode` values equal SDL's (both USB HID) and `Keycode` uses SDL3's encoding: translation is
   a cast, guarded by `static_assert`s in `src/event_translation.cpp`. Keep them in sync.
 - `pollEvents()` must not allocate in steady state; events are trivially copyable with inline

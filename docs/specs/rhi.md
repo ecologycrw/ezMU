@@ -365,6 +365,31 @@ handle, transition inside rendering) are `EZMU_ASSERT`s.
   moment it passes that check and is destroyed on any later failure.
 - Destroying the Device before its swapchains is an assertion.
 
+### Differences from the sketch (step 8, `ezmu_clear`)
+
+- **Shutdown order is swapchain → Device → window → platform**, not "window, then device"
+  (see *Threading*). A Device loaded through `Window::vulkanGetInstanceProcAddr()` uses the
+  Vulkan library SDL loaded for the window; destroying the last Vulkan window makes SDL unload
+  it, and the Device's teardown then calls into unloaded code (access violation on exit, found
+  by `samples.clear`).
+- The mailbox carries pixel size, minimized and capture; **quit is the render thread's
+  `std::stop_token`** (`std::jthread::request_stop`). While minimized the render thread blocks
+  on a condition variable instead of producing empty frames.
+- Capture copies the acquired image into a kReadback buffer inside the frame (before
+  kPresent), then `waitIdle` and swizzles BGRA → RGBA. `--capture` with `--frames N` captures
+  the last presented frame; F12 captures the next one at runtime (default `ezmu_clear.png`).
+  Escape quits.
+- `--color r,g,b[,a]` and `--validation off|on|sync` were added for the test.
+- Exit code **77** means "skipped": no display (Platform or window creation fails) or no usable
+  Vulkan device / surface support (kUnsupported). With `EZMU_REQUIRE_GPU=1` only the missing
+  display still skips. Any validation message makes the sample exit with 1.
+- `samples.clear` runs through `samples/clear/tests/run_clear_test.cmake` (skip via
+  `SKIP_REGULAR_EXPRESSION`, since `cmake -P` cannot set an exit code before CMake 3.29) and
+  checks the PNG with the test-only helper `ezmu_clear_check`, which encodes the linear clear
+  color for the reported swapchain format (sRGB or UNORM) and allows one step of rounding.
+  Linux CI has no display, so the test skips there; running it under Xvfb on lavapipe is a
+  possible follow-up.
+
 ## Threading
 
 Per [ADR 0012](../adr/0012-dedicated-render-thread.md):
@@ -377,7 +402,8 @@ Per [ADR 0012](../adr/0012-dedicated-render-thread.md):
   (in M1: a small mailbox with "new pixel size", "minimized", "capture requested", "quit";
   from M2: the render snapshot). The RHI has no knowledge of either.
 - **Shutdown:** the render thread calls `waitIdle()` and destroys the swapchain (which destroys
-  the surface) **before** the main thread destroys the window, then the device.
+  the surface) **before** the main thread destroys the window, then the device. *(Corrected in
+  step 8: the device goes before the window — see "Differences from the sketch (step 8)".)*
 - `ValidationCallback` runs on whichever thread made the offending Vulkan call; it must be
   thread-safe (the test fixture's recorder uses a mutex).
 
