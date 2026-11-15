@@ -6,6 +6,12 @@
   "license": "MPL-2.0",
   "dependencies": [
     "catch2",
+    {
+      "name": "sdl3",
+      "features": [
+        "vulkan"
+      ]
+    },
     "stb"
   ]
 }

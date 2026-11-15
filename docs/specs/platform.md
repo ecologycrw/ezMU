@@ -286,6 +286,18 @@ All tests run in CI on Windows and Linux without a display, using `VideoBackend:
 - [ ] `engine/platform/CLAUDE.md` and path-scoped rule `.claude/rules/platform.md` written.
 - [ ] Owner checked the sample on their machine (resize, minimize, DPI).
 
+## Implementation notes (M1, differences from the sketch)
+
+- A second concurrent `Platform::create` returns `kInvalidArgument` instead of asserting, so the
+  rule is testable and safe in release builds.
+- `Window` getters query SDL and are **main thread only** (no cached cross-thread state); the
+  composition root forwards sizes to the render thread.
+- `vulkanGetInstanceProcAddr()` is a member returning `VulkanVoidFunction` (a function pointer,
+  not `void*`), and is `nullptr` for non-Vulkan or headless windows.
+- Added `Window::mode()` and `Window::setLogicalSize()`; digit scancodes are `kDigit0`–`kDigit9`
+  (clang-tidy flags `k0`/`kO` and `k1`/`kI` as confusable).
+- SDL3 comes from vcpkg with the `vulkan` feature.
+
 ## Implementation plan
 
 The M1 plan for both modules (including the `ezmu::engine` aggregator and the path-scoped
