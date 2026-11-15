@@ -5,6 +5,7 @@
   "description": "Client-side engine for classic MMORPGs",
   "license": "MPL-2.0",
   "dependencies": [
-    "catch2"
+    "catch2",
+    "stb"
   ]
 }
