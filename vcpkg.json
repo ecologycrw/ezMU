@@ -21,6 +21,8 @@
         }
       ]
     },
-    "stb"
+    "stb",
+    "volk",
+    "vulkan-memory-allocator"
   ]
 }

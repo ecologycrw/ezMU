@@ -280,6 +280,19 @@ handle, transition inside rendering) are `EZMU_ASSERT`s.
 - **Debug names:** every Vulkan object gets `vkSetDebugUtilsObjectNameEXT` when validation or
   debug utils are available.
 
+### Differences from the sketch (step 5, device)
+
+- **One `Device` at a time:** volk's function pointers are process-global, so a second
+  concurrent `Device::create` fails with `kInvalidArgument` (same rule as `platform::Platform`).
+- Added `validationMode()`, `validationWarningCount()`, `nativePhysicalDevice()` and
+  `nativeDevice()` (the last two for interop and the validation self-test).
+- `DeviceDesc::vkGetInstanceProcAddr` is a `VulkanVoidFunction` (function pointer), matching
+  `platform::Window::vulkanGetInstanceProcAddr()`; `framesInFlight` moves to the frame/swapchain
+  step.
+- Without a callback, validation messages are printed to stderr.
+- Presentation support is checked per surface when the swapchain is created (step 7);
+  `requirePresent` only requires `VK_KHR_swapchain` at device creation.
+
 ## Threading
 
 Per [ADR 0012](../adr/0012-dedicated-render-thread.md):

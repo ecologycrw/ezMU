@@ -129,7 +129,8 @@ function(ezmu_add_module_tests)
     add_executable(${target} ${ARG_SOURCES})
     target_link_libraries(${target} PRIVATE "ezmu::${ARG_NAME}" ${ARG_DEPS} Catch2::Catch2WithMain)
     _ezmu_apply_defaults(${target})
-    catch_discover_tests(${target} TEST_PREFIX "${ARG_NAME}." DISCOVERY_MODE PRE_TEST)
+    catch_discover_tests(${target} TEST_PREFIX "${ARG_NAME}." DISCOVERY_MODE PRE_TEST
+        ADD_TAGS_AS_LABELS)
 endfunction()
 
 function(ezmu_add_executable)

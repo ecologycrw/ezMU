@@ -1,0 +1,6 @@
+# LeakSanitizer suppressions for Linux CI (ADR 0020). Only third-party, uninstrumented Vulkan
+# components loaded at runtime belong here; leaks in ezMU code must never be suppressed.
+leak:libvulkan.so
+leak:libvulkan_lvp.so
+leak:libLLVM
+leak:libVkLayer_khronos_validation.so
