@@ -48,8 +48,8 @@ struct RenderingDesc {
     foundation::Rect2D area{};
 };
 
-/// Records GPU commands. Obtained from Device::executeImmediate() (and, from the frames step on,
-/// from a frame); valid only while that recording lasts. Same thread as the owning Device.
+/// Records GPU commands. Obtained from Device::executeImmediate() or Frame::commandList(); valid
+/// only while that recording lasts. Same thread as the owning Device.
 ///
 /// Programming errors are EZMU_ASSERTs and the offending command is skipped: stale handles,
 /// a transition inside a rendering pass, an attachment that is not a render target in
@@ -85,6 +85,7 @@ public:
 
 private:
     friend struct Device::Impl;
+    friend class Frame;
     CommandList(Device::Impl& device, void* commandBuffer) noexcept;
 
     Device::Impl* m_device = nullptr;

@@ -358,9 +358,10 @@ foundation::Result<> Device::Impl::createImmediateContext() {
 foundation::Result<>
 Device::Impl::executeImmediate(const std::function<void(CommandList&)>& record) {
     EZMU_ASSERT_MSG(!recording, "Device::executeImmediate must not be nested");
-    if (recording) {
+    EZMU_ASSERT_MSG(openFrame == nullptr, "Device::executeImmediate while a frame is recorded");
+    if (recording || openFrame != nullptr) {
         return foundation::makeError(foundation::ErrorCode::kInvalidArgument,
-                                     "Device::executeImmediate: nested call");
+                                     "Device::executeImmediate: nested call or open frame");
     }
     if (auto created = createImmediateContext(); !created) {
         return created;
@@ -382,14 +383,7 @@ Device::Impl::executeImmediate(const std::function<void(CommandList&)>& record) 
     record(list);
     recording = false;
     // Keep the command buffer valid even when the caller left a pass or label open.
-    EZMU_ASSERT_MSG(!list.m_insideRendering, "executeImmediate: rendering pass left open");
-    EZMU_ASSERT_MSG(list.m_labelDepth == 0, "executeImmediate: debug label left open");
-    if (list.m_insideRendering) {
-        list.endRendering();
-    }
-    while (list.m_labelDepth > 0) {
-        list.endDebugLabel();
-    }
+    closeRecording(list);
 
     if (const VkResult result = vkEndCommandBuffer(immediate.commandBuffer); result != VK_SUCCESS) {
         return std::unexpected(detail::vkError(result, "vkEndCommandBuffer"));
@@ -422,13 +416,14 @@ foundation::Result<> Device::executeImmediate(const std::function<void(CommandLi
 
 foundation::Result<foundation::Image> Device::readTexture(TextureHandle texture) {
     using foundation::ErrorCode;
-    EZMU_ASSERT_MSG(!m_impl->recording, "Device::readTexture called while recording");
+    const bool idle = !m_impl->recording && m_impl->openFrame == nullptr;
+    EZMU_ASSERT_MSG(idle, "Device::readTexture called while recording or inside a frame");
     const detail::TextureRecord* record = m_impl->textures.get(texture);
     EZMU_ASSERT_MSG(record != nullptr, "Device::readTexture: invalid or stale TextureHandle");
-    if (record == nullptr || m_impl->recording) {
+    if (record == nullptr || !idle) {
         return foundation::makeError(ErrorCode::kInvalidArgument,
                                      "Device::readTexture: invalid or stale handle, or called "
-                                     "while recording");
+                                     "while recording or inside a frame");
     }
     bool swizzle = false;
     switch (record->format) {

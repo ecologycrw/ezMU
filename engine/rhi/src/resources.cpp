@@ -120,7 +120,7 @@ void Device::Impl::destroyTexture(detail::TextureRecord& texture) const noexcept
     if (texture.view != VK_NULL_HANDLE) {
         vkDestroyImageView(device, texture.view, nullptr);
     }
-    if (texture.image != VK_NULL_HANDLE) {
+    if (texture.image != VK_NULL_HANDLE && !texture.swapchainImage) {
         vmaDestroyImage(allocator, texture.image, texture.allocation);
     }
     texture = {};
@@ -293,10 +293,15 @@ void Device::destroy(TextureHandle texture) {
         return;
     }
     EZMU_ASSERT_MSG(!m_impl->recording, "Device::destroy called while recording");
-    auto record = m_impl->textures.remove(texture);
-    EZMU_ASSERT_MSG(record.has_value(), "Device::destroy: stale TextureHandle");
-    if (record) {
-        m_impl->destroyTexture(*record);
+    const detail::TextureRecord* found = m_impl->textures.get(texture);
+    EZMU_ASSERT_MSG(found != nullptr, "Device::destroy: stale TextureHandle");
+    const bool swapchainImage = found != nullptr && found->swapchainImage;
+    EZMU_ASSERT_MSG(!swapchainImage, "Device::destroy: swapchain images belong to their swapchain");
+    if (found == nullptr || swapchainImage) {
+        return;
+    }
+    if (auto record = m_impl->textures.remove(texture)) {
+        m_impl->retire(*record);
     }
 }
 
@@ -308,7 +313,7 @@ void Device::destroy(BufferHandle buffer) {
     auto record = m_impl->buffers.remove(buffer);
     EZMU_ASSERT_MSG(record.has_value(), "Device::destroy: stale BufferHandle");
     if (record) {
-        m_impl->destroyBuffer(*record);
+        m_impl->retire(*record);
     }
 }
 

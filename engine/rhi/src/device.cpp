@@ -5,8 +5,10 @@
 #include <cstdio>
 #include <exception>
 #include <format>
+#include <limits>
 #include <print>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -291,11 +293,22 @@ foundation::Result<> createDevice(Device::Impl& impl, const DeviceDesc& desc) {
 } // namespace
 
 Device::Impl::~Impl() {
+    EZMU_ASSERT_MSG(swapchainCount == 0, "Device destroyed before its swapchains");
     if (device != VK_NULL_HANDLE) {
         static_cast<void>(vkDeviceWaitIdle(device));
-        // Resources the application did not destroy are owned by the device.
+        // Deferred destructions are drained first; then resources the application did not
+        // destroy, which the device owns.
+        collectDestructions(std::numeric_limits<std::uint64_t>::max());
         textures.forEach([this](detail::TextureRecord& texture) { destroyTexture(texture); });
         buffers.forEach([this](detail::BufferRecord& buffer) { destroyBuffer(buffer); });
+        for (const detail::FrameSlot& slot : frameSlots) {
+            if (slot.pool != VK_NULL_HANDLE) {
+                vkDestroyCommandPool(device, slot.pool, nullptr); // Frees the command buffer.
+            }
+        }
+        if (timeline != VK_NULL_HANDLE) {
+            vkDestroySemaphore(device, timeline, nullptr);
+        }
         if (immediate.fence != VK_NULL_HANDLE) {
             vkDestroyFence(device, immediate.fence, nullptr);
         }
@@ -321,9 +334,22 @@ Device::Impl::~Impl() {
 }
 
 foundation::Result<std::unique_ptr<Device>> Device::create(const DeviceDesc& desc) {
+    if (desc.framesInFlight == 0 || desc.framesInFlight > kMaxFramesInFlight) {
+        return foundation::makeError(
+            foundation::ErrorCode::kInvalidArgument,
+            std::format("Device::create: framesInFlight must be 1..{} (got {})", kMaxFramesInFlight,
+                        desc.framesInFlight));
+    }
     auto impl = std::make_unique<Impl>();
     impl->validation = desc.validation;
     impl->callback = desc.onValidationMessage;
+    impl->framesInFlight = desc.framesInFlight;
+    // Surfaces need VK_KHR_surface (from the window's extensions) and swapchains VK_KHR_swapchain.
+    impl->surfaceSupport = desc.requirePresent &&
+                           std::ranges::any_of(desc.instanceExtensions, [](const char* extension) {
+                               return extension != nullptr &&
+                                      std::string_view(extension) == VK_KHR_SURFACE_EXTENSION_NAME;
+                           });
 
     if (auto result = initializeLoader(*impl, desc); !result) {
         return std::unexpected(std::move(result.error()));
@@ -345,6 +371,9 @@ foundation::Result<std::unique_ptr<Device>> Device::create(const DeviceDesc& des
     impl->adapter = std::move(selected->info);
 
     if (auto result = createDevice(*impl, desc); !result) {
+        return std::unexpected(std::move(result.error()));
+    }
+    if (auto result = impl->createFrameResources(); !result) {
         return std::unexpected(std::move(result.error()));
     }
     // NOLINTNEXTLINE(modernize-make-unique): the constructor is private.
@@ -375,6 +404,7 @@ void Device::waitIdle() {
     if (const VkResult result = vkDeviceWaitIdle(m_impl->device); result != VK_SUCCESS) {
         EZMU_VERIFY_MSG(result == VK_SUCCESS, "vkDeviceWaitIdle failed (device lost?)");
     }
+    m_impl->collectDestructions(m_impl->refreshCompletedValue());
 }
 
 void Device::Impl::setDebugName(VkObjectType type, std::uint64_t object,

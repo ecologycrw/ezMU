@@ -12,7 +12,9 @@ ezmu_add_module(
         src/adapter.cpp
         src/command_list.cpp
         src/device.cpp
+        src/frame.cpp
         src/resources.cpp
+        src/swapchain.cpp
         src/vk_mem_alloc.cpp
         src/vulkan.cpp
     PUBLIC_DEPS
@@ -35,8 +37,10 @@ ezmu_add_module_tests(
     SOURCES
         tests/command_list_tests.cpp
         tests/device_tests.cpp
+        tests/frame_tests.cpp
         tests/handle_tests.cpp
         tests/resource_tests.cpp
+        tests/swapchain_tests.cpp
     DEPS
         volk::volk)
 if(TARGET ezmu_rhi_tests)

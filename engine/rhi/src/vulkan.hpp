@@ -52,6 +52,17 @@ template <typename T>
     }
 }
 
+/// Inverse of rawHandle(): a non-dispatchable handle (e.g. VkSurfaceKHR) from its 64-bit value.
+template <typename T>
+[[nodiscard]] T fromRawHandle(std::uint64_t value) noexcept {
+    if constexpr (std::is_pointer_v<T>) {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast,performance-no-int-to-ptr)
+        return reinterpret_cast<T>(value); // Opaque handle value from interop.
+    } else {
+        return static_cast<T>(value);
+    }
+}
+
 /// Lowercase ASCII copy (adapter name matching).
 [[nodiscard]] std::string toLowerAscii(std::string_view text);
 

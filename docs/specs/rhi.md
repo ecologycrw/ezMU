@@ -325,6 +325,46 @@ handle, transition inside rendering) are `EZMU_ASSERT`s.
   Destroying an invalid (default) handle is a no-op, like `delete nullptr`.
 - Reference-image mismatches also write `expected.png` next to `actual.png`/`diff.png`.
 
+### Differences from the sketch (step 7, frames in flight and swapchain)
+
+- `DeviceDesc::framesInFlight` (default 2) is validated against `kMaxFramesInFlight = 4`
+  (kInvalidArgument otherwise). Frame `n` signals timeline value `n + 1`; `beginFrame` waits for
+  `n + 1 - framesInFlight`, capped at the last submitted value so a failed submission cannot
+  hang the next frame. Each slot has one command pool + primary command buffer, reset at
+  `beginFrame`. `Frame` also exposes `slot()` for per-slot game resources;
+  `Device::framesInFlight()` returns the setting.
+- **Deferred destruction** uses one queue ordered by timeline value instead of per-slot
+  queues: `destroy()` tags the object with the open frame's value (or, outside frames, the last
+  submitted one). If the GPU has already reached it — e.g. a device that never ran frames, as in
+  step 6 — the object is freed at once. Pending objects are freed in `beginFrame`, in
+  `waitIdle` and at shutdown. `Device::pendingDestructionCount()` is public for tests and
+  diagnostics.
+- `executeImmediate` and `readTexture` are rejected (assert + kInvalidArgument) while a frame
+  is open: they submit immediately, before the frame's already-recorded commands, which would
+  break record-time state tracking. Outside frames they run after the submitted frames
+  (barriers order them on the single queue). Capturing a presented swapchain image therefore
+  means copying it to a readback buffer inside the frame (step 8).
+- `endFrame` closes open passes/labels and transitions acquired images not in kPresent (each
+  after an assertion) so the submission stays valid; all acquired images of a frame are
+  presented with one `vkQueuePresentKHR`. Present results OUT_OF_DATE/SUBOPTIMAL mark the
+  swapchain for recreation on its next `acquire`; other errors fail `endFrame` after the frame
+  is over.
+- **Swapchain:** created eagerly when `pixelSize` is not empty (so `format()`/`extent()` are
+  known), otherwise on the first acquire. Formats: B8G8R8A8/R8G8B8A8, sRGB first when
+  `srgb` (UNORM first otherwise), SRGB_NONLINEAR color space; kUnsupported if none. Image count
+  `minImageCount + 1`; opaque composite alpha when available; `kTransferSrc` only when
+  `allowCapture` and the surface supports it (`Swapchain::imageUsage()` reports it, as does
+  `presentMode()` for the kFifo fallback). `SwapchainDesc` gained `debugName`.
+- `acquire` at most once per swapchain per frame; on OUT_OF_DATE it recreates and retries once,
+  then returns an invalid handle. **Recreation waits for the queue** (`vkQueueWaitIdle`) before
+  replacing images: without `VK_EXT_swapchain_maintenance1` there is no signal for when
+  presentation of old images ends; it happens only on resize/out-of-date, never per frame.
+- Presentation support: `surfaceSupport` requires `requirePresent` **and** `VK_KHR_surface`
+  among `instanceExtensions`; otherwise `createSwapchain` fails with kUnsupported without
+  touching the surface (it cannot belong to this instance). The surface is owned from the
+  moment it passes that check and is destroyed on any later failure.
+- Destroying the Device before its swapchains is an assertion.
+
 ## Threading
 
 Per [ADR 0012](../adr/0012-dedicated-render-thread.md):

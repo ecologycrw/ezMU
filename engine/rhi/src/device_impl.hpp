@@ -2,13 +2,18 @@
 
 #include <ezmu/rhi/command_list.hpp>
 #include <ezmu/rhi/device.hpp>
+#include <ezmu/rhi/frame.hpp>
 #include <ezmu/rhi/resources.hpp>
+#include <ezmu/rhi/swapchain.hpp>
 
 #include <atomic>
 #include <cstdint>
+#include <deque>
 #include <functional>
+#include <memory>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 #include "handle_pool.hpp"
@@ -26,6 +31,8 @@ struct TextureRecord {
     Format format = Format::kUndefined;
     TextureUsage usage = TextureUsage::kNone;
     ResourceState state = ResourceState::kUndefined; ///< Tracked at record time.
+    /// Image owned by a swapchain: only the view is ours, and Device::destroy() rejects it.
+    bool swapchainImage = false;
 };
 
 struct BufferRecord {
@@ -41,6 +48,38 @@ struct ImmediateContext {
     VkCommandPool pool = VK_NULL_HANDLE;
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
     VkFence fence = VK_NULL_HANDLE;
+};
+
+/// A destroyed resource whose GPU objects are freed once the frame timeline reaches `value`.
+struct PendingDestruction {
+    std::uint64_t value = 0;
+    std::variant<TextureRecord, BufferRecord> record{};
+};
+
+/// A swapchain image acquired during the frame being recorded.
+struct Acquisition {
+    Swapchain::Impl* swapchain = nullptr;
+    TextureHandle texture{};
+    std::uint32_t imageIndex = 0;
+    VkSemaphore acquired = VK_NULL_HANDLE;       ///< Per frame slot; waited by the submission.
+    VkSemaphore renderFinished = VK_NULL_HANDLE; ///< Per image; waited by the present.
+};
+
+/// Per-slot resources of frames in flight.
+struct FrameSlot {
+    VkCommandPool pool = VK_NULL_HANDLE; ///< Reset when the slot is reused.
+    VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+    std::unique_ptr<Frame> frame;
+};
+
+/// Scratch arrays of Device::endFrame, kept to avoid per-frame allocations.
+struct SubmitScratch {
+    std::vector<VkSemaphoreSubmitInfo> waits;
+    std::vector<VkSemaphoreSubmitInfo> signals;
+    std::vector<VkSwapchainKHR> swapchains;
+    std::vector<std::uint32_t> imageIndices;
+    std::vector<VkSemaphore> presentWaits;
+    std::vector<VkResult> presentResults;
 };
 
 [[nodiscard]] VkFormat toVkFormat(Format format) noexcept;
@@ -66,11 +105,33 @@ struct Device::Impl {
     [[nodiscard]] foundation::Result<>
     executeImmediate(const std::function<void(CommandList&)>& record);
 
+    /// Creates the frame timeline semaphore and the per-slot command pools.
+    [[nodiscard]] foundation::Result<> createFrameResources();
+
+    [[nodiscard]] foundation::Result<Frame*> beginFrame();
+    [[nodiscard]] foundation::Result<> endFrame(Frame& frame);
+
+    /// Ends an open pass and open labels so the command buffer can be ended (after an assert).
+    static void closeRecording(CommandList& list);
+    /// Presents the images acquired by the frame just submitted.
+    [[nodiscard]] foundation::Result<> present();
+
+    /// Frees `record` now when the GPU is done with every frame submitted so far (and no frame is
+    /// being recorded), otherwise queues it for collectDestructions().
+    void retire(std::variant<detail::TextureRecord, detail::BufferRecord> record);
+    /// Frees pending destructions whose timeline value has been reached.
+    void collectDestructions(std::uint64_t completed) noexcept;
+    void
+    destroyRecord(std::variant<detail::TextureRecord, detail::BufferRecord>& record) const noexcept;
+    /// Current timeline value (completed frames); kept monotonic in `completedValue`.
+    std::uint64_t refreshCompletedValue() noexcept;
+
     void destroyTexture(detail::TextureRecord& texture) const noexcept;
     void destroyBuffer(detail::BufferRecord& buffer) const noexcept;
 
     bool loaderInitialized = false;
-    bool debugUtils = false; ///< VK_EXT_debug_utils enabled (names and labels).
+    bool debugUtils = false;     ///< VK_EXT_debug_utils enabled (names and labels).
+    bool surfaceSupport = false; ///< VK_KHR_surface + VK_KHR_swapchain enabled.
     VkInstance instance = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT messenger = VK_NULL_HANDLE;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -84,6 +145,19 @@ struct Device::Impl {
     detail::HandlePool<BufferTag, detail::BufferRecord> buffers;
     detail::ImmediateContext immediate;
     bool recording = false; ///< Inside executeImmediate().
+
+    // Frames in flight: frame n signals timeline value n + 1 when the GPU finishes it.
+    std::uint32_t framesInFlight = 2;
+    VkSemaphore timeline = VK_NULL_HANDLE;
+    std::vector<detail::FrameSlot> frameSlots;
+    std::uint64_t nextFrameIndex = 0;
+    std::uint64_t submittedValue = 0;              ///< Value of the last submitted frame.
+    std::uint64_t completedValue = 0;              ///< Last timeline value observed as reached.
+    Frame* openFrame = nullptr;                    ///< Between beginFrame() and endFrame().
+    std::vector<detail::Acquisition> acquisitions; ///< Of the open frame.
+    detail::SubmitScratch scratch;
+    std::deque<detail::PendingDestruction> pendingDestructions; ///< Ordered by value.
+    std::uint32_t swapchainCount = 0;
 
     AdapterInfo adapter;
     ValidationMode validation = ValidationMode::kOff;
