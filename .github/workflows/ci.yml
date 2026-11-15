@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  VCPKG_DISABLE_METRICS: "1"
+
+jobs:
+  lint:
+    name: Format and architecture rules
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Same major version as the LLVM bundled with Visual Studio 2026 (ADR 0018).
+      - name: Install clang-format
+        run: pip install clang-format==22.1.3
+
+      - name: Check formatting
+        run: |
+          git ls-files -z -- '*.hpp' '*.cpp' '*.h' '*.inl' \
+            | xargs -0 --no-run-if-empty clang-format --dry-run --Werror --style=file
+
+      - name: Check architecture rules
+        run: cmake -DEZMU_SOURCE_DIR="$GITHUB_WORKSPACE" -P scripts/checks/check_rules.cmake
+
+  build:
+    name: ${{ matrix.preset }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, preset: windows-msvc-debug }
+          - { os: windows-latest, preset: windows-msvc-release }
+          - { os: ubuntu-24.04, preset: linux-clang-asan, cxx: clang++-18 }
+          - { os: ubuntu-24.04, preset: linux-gcc-asan, cxx: g++-14 }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux toolchain
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build g++-14 clang-18
+
+      - name: Set up MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Ninja (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ninja --no-progress -y
+
+      # Full clone: the builtin registry baseline must be present in the history.
+      - name: Bootstrap vcpkg
+        shell: bash
+        run: |
+          vcpkg_root="$RUNNER_TEMP/vcpkg"
+          git clone https://github.com/microsoft/vcpkg.git "$vcpkg_root"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            "$vcpkg_root/bootstrap-vcpkg.bat" -disableMetrics
+          else
+            "$vcpkg_root/bootstrap-vcpkg.sh" -disableMetrics
+          fi
+          echo "VCPKG_ROOT=$vcpkg_root" >> "$GITHUB_ENV"
+
+      - name: Configure vcpkg binary cache
+        shell: bash
+        run: |
+          cache_dir="$RUNNER_TEMP/vcpkg-cache"
+          mkdir -p "$cache_dir"
+          echo "VCPKG_BINARY_SOURCES=clear;files,$cache_dir,readwrite" >> "$GITHUB_ENV"
+          echo "VCPKG_CACHE_DIR=$cache_dir" >> "$GITHUB_ENV"
+
+      - name: Restore vcpkg binary cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VCPKG_CACHE_DIR }}
+          key: vcpkg-${{ matrix.preset }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+          restore-keys: vcpkg-${{ matrix.preset }}-
+
+      - name: Configure
+        shell: bash
+        run: |
+          extra=()
+          if [ -n "${{ matrix.cxx }}" ]; then extra+=("-DCMAKE_CXX_COMPILER=${{ matrix.cxx }}"); fi
+          cmake --preset "${{ matrix.preset }}" "${extra[@]}"
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+
+      - name: Test
+        run: ctest --preset ${{ matrix.preset }}
