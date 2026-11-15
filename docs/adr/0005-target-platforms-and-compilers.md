@@ -12,7 +12,7 @@ later. Linux also opens the way to Steam Deck-class devices.
 ## Decision
 
 - **Windows** (x64) is the primary platform, built with **MSVC** (Visual Studio 2026).
-- **Linux** (x64) is supported from the first commit, built with **Clang (≥ 18)** and
+- **Linux** (x64) is supported from the first commit, built with **Clang (≥ 19)** and
   **GCC (≥ 14)**.
 - **macOS** is not supported initially. Platform-specific code stays behind the platform and
   RHI layers so a MoltenVK-based port remains possible.

@@ -13,7 +13,7 @@ naming is checked by clang-tidy.
 ## Language
 
 - C++23, no extensions, no named modules. Use only features supported by MSVC (VS 2026),
-  Clang ≥ 18 and GCC ≥ 14.
+  Clang ≥ 19 and GCC ≥ 14 (Clang 18 lacks `std::expected` with libstdc++).
 - Prefer standard library facilities (`std::expected`, `std::span`, `std::format`/`std::print`,
   ranges, concepts) over in-house utilities.
 - Mark functions `[[nodiscard]]` when ignoring the result is a bug; `noexcept` when they cannot fail.

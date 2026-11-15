@@ -39,7 +39,7 @@ technological foundation.
 Requirements:
 
 - CMake ≥ 3.28 and Ninja
-- **Windows:** Visual Studio 2026 (MSVC) · **Linux:** Clang ≥ 18 or GCC ≥ 14
+- **Windows:** Visual Studio 2026 (MSVC) · **Linux:** Clang ≥ 19 or GCC ≥ 14
 - [vcpkg](https://github.com/microsoft/vcpkg) with `VCPKG_ROOT` set
 
 Windows (PowerShell):

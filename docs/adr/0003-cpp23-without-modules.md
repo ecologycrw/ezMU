@@ -24,7 +24,9 @@ build on ezMU.
 
 ## Consequences
 
-- Minimum compilers: MSVC from Visual Studio 2026, Clang ≥ 18, GCC ≥ 14.
+- Minimum compilers: MSVC from Visual Studio 2026, Clang ≥ 19, GCC ≥ 14.
+  Clang 18 is not enough: libstdc++ only provides `std::expected` when
+  `__cpp_concepts >= 202002L`, which Clang reports from version 19 (found by the first CI run).
 - A feature is used only if it works on every supported compiler; CI enforces this.
 - Revisit modules in a future ADR when CMake, compilers, clang-tidy and IDEs support them
   consistently.
