@@ -163,6 +163,7 @@ foundation::Result<> createInstance(Device::Impl& impl, const DeviceDesc& desc) 
     if (debugUtils) {
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
+    impl.debugUtils = debugUtils;
 
     const std::string appName(desc.appName);
     VkApplicationInfo app{};
@@ -262,6 +263,13 @@ foundation::Result<> createDevice(Device::Impl& impl, const DeviceDesc& desc) {
     }
     volkLoadDevice(impl.device);
     vkGetDeviceQueue(impl.device, impl.graphicsQueueFamily, 0, &impl.graphicsQueue);
+    impl.setDebugName(VK_OBJECT_TYPE_DEVICE, detail::rawHandle(impl.device), "ezMU device");
+    impl.setDebugName(VK_OBJECT_TYPE_QUEUE, detail::rawHandle(impl.graphicsQueue),
+                      "graphics queue");
+
+    VkPhysicalDeviceProperties properties{};
+    vkGetPhysicalDeviceProperties(impl.physicalDevice, &properties);
+    impl.maxImageDimension2D = properties.limits.maxImageDimension2D;
 
     VmaVulkanFunctions functions{};
     functions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
@@ -285,6 +293,15 @@ foundation::Result<> createDevice(Device::Impl& impl, const DeviceDesc& desc) {
 Device::Impl::~Impl() {
     if (device != VK_NULL_HANDLE) {
         static_cast<void>(vkDeviceWaitIdle(device));
+        // Resources the application did not destroy are owned by the device.
+        textures.forEach([this](detail::TextureRecord& texture) { destroyTexture(texture); });
+        buffers.forEach([this](detail::BufferRecord& buffer) { destroyBuffer(buffer); });
+        if (immediate.fence != VK_NULL_HANDLE) {
+            vkDestroyFence(device, immediate.fence, nullptr);
+        }
+        if (immediate.pool != VK_NULL_HANDLE) {
+            vkDestroyCommandPool(device, immediate.pool, nullptr); // Frees the command buffer.
+        }
     }
     if (allocator != VK_NULL_HANDLE) {
         vmaDestroyAllocator(allocator);
@@ -358,6 +375,20 @@ void Device::waitIdle() {
     if (const VkResult result = vkDeviceWaitIdle(m_impl->device); result != VK_SUCCESS) {
         EZMU_VERIFY_MSG(result == VK_SUCCESS, "vkDeviceWaitIdle failed (device lost?)");
     }
+}
+
+void Device::Impl::setDebugName(VkObjectType type, std::uint64_t object,
+                                std::string_view name) const {
+    if (!debugUtils || vkSetDebugUtilsObjectNameEXT == nullptr || object == 0) {
+        return;
+    }
+    const std::string terminated(name);
+    VkDebugUtilsObjectNameInfoEXT info{};
+    info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+    info.objectType = type;
+    info.objectHandle = object;
+    info.pObjectName = terminated.c_str();
+    static_cast<void>(vkSetDebugUtilsObjectNameEXT(device, &info)); // Best effort.
 }
 
 void* Device::nativeInstance() const noexcept {

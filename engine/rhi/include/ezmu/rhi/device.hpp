@@ -1,8 +1,12 @@
 #pragma once
 
+#include <ezmu/foundation/image.hpp>
 #include <ezmu/foundation/result.hpp>
 #include <ezmu/foundation/version.hpp>
+#include <ezmu/rhi/handles.hpp>
+#include <ezmu/rhi/resources.hpp>
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -14,6 +18,8 @@
 // appears in this header; interop uses opaque pointers. Spec: docs/specs/rhi.md.
 
 namespace ezmu::rhi {
+
+class CommandList;
 
 enum class ValidationMode : std::uint8_t {
     kOff,
@@ -105,6 +111,45 @@ public:
     /// Number of validation errors / warnings reported since creation. Thread-safe.
     [[nodiscard]] std::uint32_t validationErrorCount() const noexcept;
     [[nodiscard]] std::uint32_t validationWarningCount() const noexcept;
+
+    /// Creates a 2D texture (one mip, one layer) in device-local memory, in
+    /// ResourceState::kUndefined. Fails with kInvalidArgument for an empty size, kUndefined
+    /// format, no usage, or a usage that does not fit the format (render target on a depth
+    /// format, depth-stencil on a color format); with kUnsupported when the adapter does not
+    /// support the format/usage combination or size. Allocates.
+    [[nodiscard]] foundation::Result<TextureHandle> createTexture(const TextureDesc& desc);
+
+    /// Creates a buffer. kUpload and kReadback buffers are persistently mapped (mappedData()).
+    /// Fails with kInvalidArgument for size 0. Allocates.
+    [[nodiscard]] foundation::Result<BufferHandle> createBuffer(const BufferDesc& desc);
+
+    /// Destroys a resource. Invalid (default) handles are ignored; stale handles are an
+    /// EZMU_ASSERT. Must not be called while executeImmediate() is recording. Until frames in
+    /// flight exist every submission is waited for, so the object is freed immediately; with
+    /// frames, destruction is deferred until the GPU no longer uses it.
+    void destroy(TextureHandle texture);
+    void destroy(BufferHandle buffer);
+
+    /// CPU view of a kUpload or kReadback buffer (empty for kGpu buffers or stale handles).
+    /// The memory is host-coherent: no flush/invalidate is needed, but the caller must not read
+    /// GPU results before the submission that wrote them has completed. Valid until the buffer
+    /// is destroyed.
+    [[nodiscard]] std::span<std::byte> mappedData(BufferHandle buffer);
+
+    /// Records commands with `record` into a one-shot command list, submits it and blocks until
+    /// the GPU has executed it. For setup work, tests and capture; frames use their own command
+    /// lists. Must not be nested. Fails (kInternal) when submission fails or the device is lost.
+    [[nodiscard]] foundation::Result<>
+    executeImmediate(const std::function<void(CommandList&)>& record);
+
+    /// Blocking readback for tests and on-demand capture: copies `texture` to a readback buffer,
+    /// waits, and returns tightly packed RGBA8 pixels, top row first. 8-bit formats are returned
+    /// as stored (sRGB values stay sRGB-encoded); BGRA is swizzled to RGBA. The texture needs
+    /// kTransferSrc usage and must have been written (state other than kUndefined); its tracked
+    /// state is restored afterwards. Fails with kUnsupported for other formats and
+    /// kInvalidArgument for stale handles or unmet requirements. Stalls the GPU; never call per
+    /// frame.
+    [[nodiscard]] foundation::Result<foundation::Image> readTexture(TextureHandle texture);
 
     /// Blocks until the GPU has finished all submitted work. Never call per frame.
     void waitIdle();

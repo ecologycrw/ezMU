@@ -15,6 +15,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
 
 namespace ezmu::rhi::detail {
 
@@ -37,6 +38,18 @@ namespace ezmu::rhi::detail {
 [[nodiscard]] inline std::string_view fixedString(std::span<const char> text) noexcept {
     const auto end = std::ranges::find(text, '\0');
     return {text.data(), static_cast<std::size_t>(end - text.begin())};
+}
+
+/// A Vulkan handle as the 64-bit value debug utils expect (handles are pointers on 64-bit
+/// platforms and integers otherwise).
+template <typename T>
+[[nodiscard]] std::uint64_t rawHandle(T handle) noexcept {
+    if constexpr (std::is_pointer_v<T>) {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast): opaque handle value.
+        return reinterpret_cast<std::uint64_t>(handle);
+    } else {
+        return static_cast<std::uint64_t>(handle);
+    }
 }
 
 /// Lowercase ASCII copy (adapter name matching).

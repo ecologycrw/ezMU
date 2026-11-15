@@ -8,13 +8,19 @@
 //     destroyed are still checked: any warning or error fails the test.
 // Without a usable Vulkan 1.3 adapter or validation layer the test is skipped, unless
 // EZMU_REQUIRE_GPU=1, which turns the skip into a failure.
+//
+// Reference images: checkReferenceImage() compares with PNGs in engine/rhi/tests/reference/.
 
+#include <ezmu/foundation/image.hpp>
+#include <ezmu/foundation/image_compare.hpp>
+#include <ezmu/foundation/image_io.hpp>
 #include <ezmu/rhi/device.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstddef>
 #include <cstdlib>
+#include <filesystem>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -87,6 +93,43 @@ private:
 
 [[nodiscard]] inline bool gpuRequired() {
     return environmentVariable("EZMU_REQUIRE_GPU") == "1";
+}
+
+/// Compares `actual` with the reference PNG `<EZMU_RHI_REFERENCE_DIR>/<name>.png`.
+///
+/// On mismatch writes `actual.png` and `diff.png` (and `expected.png`) to
+/// `<build>/test-output/rhi/<name>/` and fails the test. With EZMU_UPDATE_REFERENCES=1 the
+/// reference is (re)written instead of compared; review the new PNG before committing it.
+inline void checkReferenceImage(const foundation::Image& actual, const std::string& name,
+                                const foundation::ImageCompareOptions& options = {}) {
+    const std::filesystem::path reference =
+        std::filesystem::path(EZMU_RHI_REFERENCE_DIR) / (name + ".png");
+    if (environmentVariable("EZMU_UPDATE_REFERENCES") == "1") {
+        auto written = foundation::writePng(reference, actual);
+        REQUIRE(written.has_value());
+        WARN("reference image updated: " << reference.string());
+        return;
+    }
+    auto expected = foundation::readPng(reference);
+    if (!expected) {
+        FAIL("missing reference image " << reference.string() << " (" << expected.error().message()
+                                        << "); run with EZMU_UPDATE_REFERENCES=1 to create it");
+    }
+    const auto comparison = foundation::compareImages(actual, *expected, options);
+    if (comparison.matches) {
+        return;
+    }
+    const std::filesystem::path output = std::filesystem::path(EZMU_RHI_TEST_OUTPUT_DIR) / name;
+    static_cast<void>(foundation::writePng(output / "actual.png", actual));
+    static_cast<void>(foundation::writePng(output / "expected.png", *expected));
+    if (!comparison.diff.isEmpty()) {
+        static_cast<void>(foundation::writePng(output / "diff.png", comparison.diff));
+    }
+    FAIL("image differs from " << reference.string()
+                               << ": size matches = " << comparison.sizeMatches
+                               << ", differing pixels = " << comparison.differingPixels
+                               << ", max channel delta = " << int{comparison.maxChannelDelta}
+                               << "; see " << output.string());
 }
 
 /// A validated headless device, or a skipped test (failed with EZMU_REQUIRE_GPU=1).

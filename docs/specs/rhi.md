@@ -293,6 +293,38 @@ handle, transition inside rendering) are `EZMU_ASSERT`s.
 - Presentation support is checked per surface when the swapchain is created (step 7);
   `requirePresent` only requires `VK_KHR_swapchain` at device creation.
 
+### Differences from the sketch (step 6, resources, command lists and readback)
+
+- **Immediate submission until frames exist:** `Device::executeImmediate(record)` records a
+  one-shot command list (one transient pool, one command buffer, one fence, created on first
+  use), submits it and waits. Tests, `readTexture` and setup work use it; step 7 adds per-frame
+  command lists. Because every submission is waited for, `destroy()` frees resources
+  immediately in step 6; step 7 moves destruction to the frame slot's deferred queue.
+- `TextureUsage` gained `kNone` (the `TextureDesc` default; creation fails without a usage) and
+  `hasAny`, `|`, `&` helpers, mirroring `platform::KeyMod`. `bytesPerPixel`, `isDepthFormat` and
+  `toString(Format)` are public helpers.
+- `BufferDesc` has no usage flags yet: M1 buffers are transfer source/destination only.
+  CPU-visible buffers (kUpload, kReadback) are persistently mapped and **host-coherent**;
+  `Device::mappedData(BufferHandle)` exposes them (needed to use `copyTextureToBuffer`).
+- Texture creation also checks `vkGetPhysicalDeviceImageFormatProperties`, returning
+  kUnsupported for format/usage/size combinations the adapter lacks.
+- `RenderingDesc::area` with an empty extent means the whole first attachment.
+  `kMaxColorAttachments = 8`; recording never allocates.
+- Transitions: read-only states (kShaderRead, kTransferSrc, kPresent) to themselves are no-ops;
+  writable states to themselves emit a barrier (orders e.g. two clears of the same image).
+  kUndefined and kPresent use ALL_COMMANDS as source stage so a transition after a semaphore
+  wait (swapchain acquire, step 7) is ordered after it. State is tracked at record time, valid
+  because command lists execute in recording order on the single queue.
+- `copyTextureToBuffer` into a kReadback buffer appends a TRANSFER→HOST barrier, since fence
+  waits do not make device writes visible to the host.
+- `readTexture` requires kTransferSrc usage and a written texture (state ≠ kUndefined), restores
+  the texture's tracked state, and supports the four 8-bit RGBA/BGRA formats (kUnsupported
+  otherwise).
+- Programming errors (stale handles, wrong states, unbalanced begin/end) are `EZMU_ASSERT`s
+  after which the call does nothing, so a returning assertion handler (tests) stays safe.
+  Destroying an invalid (default) handle is a no-op, like `delete nullptr`.
+- Reference-image mismatches also write `expected.png` next to `actual.png`/`diff.png`.
+
 ## Threading
 
 Per [ADR 0012](../adr/0012-dedicated-render-thread.md):
