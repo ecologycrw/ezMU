@@ -17,9 +17,9 @@
 namespace ezmu::foundation {
 
 struct AssertionInfo {
-    std::string_view expression;
-    std::string_view message;
-    std::source_location location;
+    std::string_view expression{};
+    std::string_view message{};
+    std::source_location location{};
 };
 
 using AssertionHandler = void (*)(const AssertionInfo& info);

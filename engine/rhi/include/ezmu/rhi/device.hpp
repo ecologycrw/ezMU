@@ -39,8 +39,8 @@ enum class ValidationSeverity : std::uint8_t { kInfo, kWarning, kError };
 /// A message from the validation layer or the driver. Views are valid only during the callback.
 struct ValidationMessage {
     ValidationSeverity severity = ValidationSeverity::kInfo;
-    std::string_view messageIdName;
-    std::string_view text;
+    std::string_view messageIdName{};
+    std::string_view text{};
 };
 
 /// Called for warnings and errors, on the thread that made the Vulkan call. Must be thread-safe.
@@ -52,15 +52,15 @@ using VulkanVoidFunction = void (*)();
 struct DeviceDesc {
     std::string_view appName = "ezMU";
     /// Instance extensions needed for presentation (from platform::Window). Empty = headless.
-    std::span<const char* const> instanceExtensions;
+    std::span<const char* const> instanceExtensions{};
     /// Require swapchain support (VK_KHR_swapchain). false for headless devices.
     bool requirePresent = true;
     ValidationMode validation = kDefaultValidationMode;
-    ValidationCallback onValidationMessage;
+    ValidationCallback onValidationMessage{};
     AdapterPreference adapterPreference = AdapterPreference::kHighPerformance;
     /// Case-insensitive substring of the adapter name. The EZMU_GPU environment variable, when
     /// set, overrides it.
-    std::string_view adapterNameFilter;
+    std::string_view adapterNameFilter{};
     /// Optional vkGetInstanceProcAddr to load Vulkan from (e.g. the library SDL loaded). When
     /// null, the system Vulkan loader is used.
     VulkanVoidFunction vkGetInstanceProcAddr = nullptr;
@@ -70,12 +70,12 @@ enum class AdapterType : std::uint8_t { kOther, kIntegrated, kDiscrete, kVirtual
 
 /// Description of the GPU a Device runs on.
 struct AdapterInfo {
-    std::string name;
+    std::string name{};
     AdapterType type = AdapterType::kOther;
     std::uint32_t vendorId = 0;
     std::uint32_t deviceId = 0;
-    std::string driver; ///< Driver name and version, as reported by the driver.
-    foundation::Version apiVersion;
+    std::string driver{}; ///< Driver name and version, as reported by the driver.
+    foundation::Version apiVersion{};
 };
 
 /// Owns the Vulkan instance, debug messenger, logical device, queue and memory allocator.

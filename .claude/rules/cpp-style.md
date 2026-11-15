@@ -18,6 +18,9 @@ naming is checked by clang-tidy.
   ranges, concepts) over in-house utilities.
 - Mark functions `[[nodiscard]]` when ignoring the result is a bug; `noexcept` when they cannot fail.
 - `enum class` only. Size enums deliberately (`std::uint8_t` when enough).
+- Every member of a public aggregate (`*Desc`, events, value structs) has a default member
+  initializer (`= value` or `{}`), so callers may omit it in designated initializers. GCC and
+  Clang warn (`-Wmissing-field-initializers`) otherwise; MSVC does not, so CI catches it late.
 - No `using namespace` in headers. No C-style casts.
 
 ## Errors

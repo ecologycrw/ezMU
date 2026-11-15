@@ -33,8 +33,8 @@ struct Offset2D {
 
 /// An axis-aligned rectangle: top-left `offset` plus `extent`.
 struct Rect2D {
-    Offset2D offset;
-    Extent2D extent;
+    Offset2D offset{};
+    Extent2D extent{};
 
     friend constexpr bool operator==(const Rect2D&, const Rect2D&) = default;
 };

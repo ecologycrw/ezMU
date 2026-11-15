@@ -22,7 +22,7 @@ struct ImageComparison {
     std::uint8_t maxChannelDelta = 0;
     /// Visualization, filled when sizes match and some pixel differs: differing pixels are
     /// opaque red; equal pixels are the expected image dimmed to grayscale at 25 % intensity.
-    Image diff;
+    Image diff{};
 };
 
 /// Compares `actual` with `expected`. Images of different sizes never match. Pure function,

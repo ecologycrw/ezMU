@@ -32,9 +32,9 @@ enum class LogLevel : std::uint8_t {
 /// One log record. The views are valid only for the duration of ILogSink::write().
 struct LogRecord {
     LogLevel level = LogLevel::kInfo;
-    std::string_view category; ///< Usually the module name, e.g. "rhi".
-    std::string_view message;
-    std::source_location location; ///< May be empty (no file name) for formatted records.
+    std::string_view category{}; ///< Usually the module name, e.g. "rhi".
+    std::string_view message{};
+    std::source_location location{}; ///< May be empty (no file name) for formatted records.
 };
 
 /// Destination of log records (console, file, test recorder, in-game console...).

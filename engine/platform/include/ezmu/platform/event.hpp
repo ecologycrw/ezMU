@@ -61,8 +61,8 @@ struct WindowCloseRequested {
 struct WindowResized {
     std::chrono::nanoseconds timestamp{};
     WindowId window = WindowId::kNone;
-    foundation::Extent2D logicalSize;
-    foundation::Extent2D pixelSize;
+    foundation::Extent2D logicalSize{};
+    foundation::Extent2D pixelSize{};
 };
 
 struct WindowMinimized {
@@ -107,15 +107,15 @@ struct KeyUp {
 struct MouseMoved {
     std::chrono::nanoseconds timestamp{};
     WindowId window = WindowId::kNone;
-    PointF position;
-    PointF delta;
+    PointF position{};
+    PointF delta{};
 };
 
 struct MouseButtonDown {
     std::chrono::nanoseconds timestamp{};
     WindowId window = WindowId::kNone;
     MouseButton button = MouseButton::kUnknown;
-    PointF position;
+    PointF position{};
     std::uint8_t clicks = 1; ///< 2 for a double click, etc.
 };
 
@@ -123,7 +123,7 @@ struct MouseButtonUp {
     std::chrono::nanoseconds timestamp{};
     WindowId window = WindowId::kNone;
     MouseButton button = MouseButton::kUnknown;
-    PointF position;
+    PointF position{};
     std::uint8_t clicks = 1;
 };
 
@@ -131,8 +131,8 @@ struct MouseButtonUp {
 struct MouseWheel {
     std::chrono::nanoseconds timestamp{};
     WindowId window = WindowId::kNone;
-    PointF delta;
-    PointF position;
+    PointF delta{};
+    PointF position{};
 };
 
 /// Committed text (after IME composition, dead keys, etc.). Long text arrives as several
@@ -140,7 +140,7 @@ struct MouseWheel {
 struct TextInput {
     std::chrono::nanoseconds timestamp{};
     WindowId window = WindowId::kNone;
-    EventText text;
+    EventText text{};
 };
 
 /// IME composition in progress. `cursor` and `selectionLength` are in code points (-1 when the
@@ -148,7 +148,7 @@ struct TextInput {
 struct TextEditing {
     std::chrono::nanoseconds timestamp{};
     WindowId window = WindowId::kNone;
-    EventText text;
+    EventText text{};
     std::int32_t cursor = -1;
     std::int32_t selectionLength = -1;
 };
