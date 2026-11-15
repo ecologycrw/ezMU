@@ -25,6 +25,7 @@ We adopt the following libraries, each wrapped by (and only used inside) the mod
 | Tracy | Profiling | `foundation` (profiling hooks) |
 | miniaudio | Audio | `audio` |
 | Catch2 v3 | Unit and integration tests | tests only |
+| stb (stb_image, stb_image_write) | PNG read/write for tests and frame capture ([ADR 0021](0021-stb-for-png-image-io.md)) | `foundation` (image I/O) |
 
 Rules:
 

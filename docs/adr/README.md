@@ -24,3 +24,5 @@ Use [0000-template.md](0000-template.md) for new ADRs.
 | [0017](0017-client-server-authority-model.md) | Client–server authority model | Accepted |
 | [0018](0018-code-commit-and-branch-conventions.md) | Code, commit and branch conventions | Accepted |
 | [0019](0019-ai-assisted-development-workflow.md) | AI-assisted development workflow | Accepted |
+| [0020](0020-gpu-tests-headless-and-software-vulkan-in-ci.md) | GPU tests: headless rendering, reference images and software Vulkan in CI | Accepted |
+| [0021](0021-stb-for-png-image-io.md) | stb for PNG image I/O in foundation | Accepted |

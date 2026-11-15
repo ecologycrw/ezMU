@@ -307,7 +307,7 @@ Per [ADR 0012](../adr/0012-dedicated-render-thread.md):
   validation layer (Vulkan SDK on Windows; `vulkan-validationlayers` package on Linux).
   Documented in the README "Building" section.
 - **PNG encode/decode** for reference images and frame capture is needed by `foundation`'s
-  image I/O (see *Open decisions*, D3). The RHI itself only produces `foundation::Image`.
+  image I/O (decision D3, [ADR 0021](../adr/0021-stb-for-png-image-io.md)). The RHI itself only produces `foundation::Image`.
 
 ## Extension points
 
@@ -353,7 +353,7 @@ must be able to verify pixels without a human.
      expected to have a GPU sets `EZMU_REQUIRE_GPU=1`, which turns "skipped" into "failed".
 3. **Sample test** `samples.clear` (label `gpu`, needs a display): runs `ezmu_clear --frames 10
    --capture <out>.png` and compares the capture with the expected clear color.
-4. **CI** (see D2): Linux jobs install Mesa **lavapipe** (software Vulkan 1.3) and the
+4. **CI** (decision D2, [ADR 0020](../adr/0020-gpu-tests-headless-and-software-vulkan-in-ci.md)): Linux jobs install Mesa **lavapipe** (software Vulkan 1.3) and the
    validation layers and run GPU tests with `EZMU_REQUIRE_GPU=1` under ASan/UBSan; Windows
    jobs build everything and run non-GPU tests (GPU tests skip: no driver on hosted runners).
    The owner's machine (real GPU, Vulkan SDK) runs the full suite through `scripts/dev.ps1`.
