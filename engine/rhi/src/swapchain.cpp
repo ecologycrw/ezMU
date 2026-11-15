@@ -103,7 +103,7 @@ VkCompositeAlphaFlagBitsKHR chooseCompositeAlpha(VkCompositeAlphaFlagsKHR suppor
         VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
         VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR, VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR};
     for (const VkCompositeAlphaFlagBitsKHR bit : kOrder) {
-        if ((supported & bit) != 0) {
+        if ((supported & static_cast<VkCompositeAlphaFlagsKHR>(bit)) != 0) {
             return bit;
         }
     }
