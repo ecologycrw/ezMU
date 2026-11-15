@@ -9,6 +9,8 @@ namespace ezmu::foundation {
 
 namespace {
 
+// The one sanctioned piece of mutable global state in foundation (see assert.hpp).
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 std::atomic<AssertionHandler> g_assertionHandler{&defaultAssertionHandler};
 
 } // namespace

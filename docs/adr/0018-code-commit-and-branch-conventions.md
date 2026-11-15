@@ -18,6 +18,7 @@ AI assistance and reviewed by humans. Conventions must be automated wherever pos
 | Functions, variables, parameters | `camelCase` | `loadTexture`, `frameIndex` |
 | Private/protected data members | `m_` + `camelCase` | `m_device` |
 | Constants and enumerators | `k` + `PascalCase` | `kMaxFramesInFlight` |
+| Mutable globals (rare, must be justified) | `g_` + `camelCase` | `g_assertionHandler` |
 | Macros | `EZMU_` + `UPPER_SNAKE_CASE` | `EZMU_ASSERT` |
 | Namespaces | `ezmu::<module>` (lowercase) | `ezmu::renderer` |
 | Files | `snake_case`, `.hpp` / `.cpp` | `texture_handle.hpp` |

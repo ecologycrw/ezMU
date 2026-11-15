@@ -1,0 +1,40 @@
+# ezMU formatting (ADR 0018). Requires clang-format 22.
+---
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: Latest
+
+IndentWidth: 4
+ColumnLimit: 100
+AccessModifierOffset: -4
+IndentCaseLabels: false
+NamespaceIndentation: None
+FixNamespaceComments: true
+
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortLambdasOnASingleLine: All
+BreakTemplateDeclarations: Yes
+
+InsertBraces: true
+InsertNewlineAtEOF: true
+
+# Include order: own header, ezMU headers, third-party, standard library.
+SortIncludes: CaseSensitive
+IncludeBlocks: Regroup
+IncludeIsMainRegex: '(_tests)?$'
+IncludeCategories:
+  - Regex: '^<ezmu/'
+    Priority: 2
+  - Regex: '^<(catch2|SDL3|vulkan|volk|vk_mem_alloc|glm|entt|asio|imgui|tracy|miniaudio|ft2build|freetype|hb)'
+    Priority: 3
+  - Regex: '^<[a-z_]+>$'
+    Priority: 4
+  - Regex: '.*'
+    Priority: 5
+...

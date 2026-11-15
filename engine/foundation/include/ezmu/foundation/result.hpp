@@ -9,7 +9,7 @@
 namespace ezmu::foundation {
 
 /// Broad category of a recoverable error.
-enum class ErrorCode : std::uint32_t {
+enum class ErrorCode : std::uint8_t {
     kUnknown = 0,
     kInvalidArgument,
     kNotFound,

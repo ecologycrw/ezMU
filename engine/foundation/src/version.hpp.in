@@ -17,8 +17,9 @@ struct Version {
 };
 
 inline constexpr std::string_view kEngineName = "ezMU";
-inline constexpr Version kEngineVersion{@PROJECT_VERSION_MAJOR@, @PROJECT_VERSION_MINOR@,
-                                        @PROJECT_VERSION_PATCH@};
+inline constexpr Version kEngineVersion{.major = @PROJECT_VERSION_MAJOR@,
+                                        .minor = @PROJECT_VERSION_MINOR@,
+                                        .patch = @PROJECT_VERSION_PATCH@};
 inline constexpr std::string_view kEngineVersionString = "@PROJECT_VERSION@";
 
 } // namespace ezmu::foundation

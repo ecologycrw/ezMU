@@ -21,7 +21,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$repoRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'lib\ezmu-tools.ps1')
+$repoRoot = Get-EzmuRepoRoot
 
 function Enter-EzmuDevShell {
     if (Get-Command cl.exe -ErrorAction SilentlyContinue) { return }
@@ -47,29 +48,21 @@ function Initialize-VcpkgRoot {
     $env:VCPKG_ROOT = $userValue
 }
 
-function Invoke-Native {
-    param([string] $Exe, [string[]] $Arguments)
-    & $Exe @Arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "'$Exe $($Arguments -join ' ')' failed with exit code $LASTEXITCODE."
-    }
-}
-
 Initialize-VcpkgRoot
 Enter-EzmuDevShell
 
 Push-Location $repoRoot
 try {
     if ($Step -in 'configure', 'all') {
-        Invoke-Native cmake @('--preset', $Preset)
+        Invoke-EzmuNative cmake @('--preset', $Preset)
     }
     if ($Step -in 'build', 'all') {
-        Invoke-Native cmake @('--build', '--preset', $Preset)
+        Invoke-EzmuNative cmake @('--build', '--preset', $Preset)
     }
     if ($Step -in 'test', 'all') {
         $testArgs = @('--preset', $Preset)
         if ($TestFilter) { $testArgs += @('-R', $TestFilter) }
-        Invoke-Native ctest $testArgs
+        Invoke-EzmuNative ctest $testArgs
     }
 }
 finally {

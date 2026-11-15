@@ -47,12 +47,12 @@ void reportAssertionFailure(std::string_view expression, std::string_view messag
 
 } // namespace ezmu::foundation
 
-#define EZMU_DETAIL_CHECK(expr, msg)                                                              \
-    do {                                                                                          \
-        if (!(expr)) [[unlikely]] {                                                               \
-            ::ezmu::foundation::detail::reportAssertionFailure(#expr, (msg),                      \
-                                                               std::source_location::current()); \
-        }                                                                                         \
+#define EZMU_DETAIL_CHECK(expr, msg)                                                               \
+    do {                                                                                           \
+        if (!(expr)) [[unlikely]] {                                                                \
+            ::ezmu::foundation::detail::reportAssertionFailure(#expr, (msg),                       \
+                                                               std::source_location::current());   \
+        }                                                                                          \
     } while (false)
 
 #define EZMU_VERIFY(expr) EZMU_DETAIL_CHECK(expr, "")
@@ -62,12 +62,12 @@ void reportAssertionFailure(std::string_view expression, std::string_view messag
 #define EZMU_ASSERT(expr) EZMU_DETAIL_CHECK(expr, "")
 #define EZMU_ASSERT_MSG(expr, msg) EZMU_DETAIL_CHECK(expr, msg)
 #else
-#define EZMU_ASSERT(expr)                                                                         \
-    do {                                                                                          \
-        static_cast<void>(sizeof(expr));                                                          \
+#define EZMU_ASSERT(expr)                                                                          \
+    do {                                                                                           \
+        static_cast<void>(sizeof(expr));                                                           \
     } while (false)
-#define EZMU_ASSERT_MSG(expr, msg)                                                                \
-    do {                                                                                          \
-        static_cast<void>(sizeof(expr));                                                          \
+#define EZMU_ASSERT_MSG(expr, msg)                                                                 \
+    do {                                                                                           \
+        static_cast<void>(sizeof(expr));                                                           \
     } while (false)
 #endif
