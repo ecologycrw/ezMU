@@ -26,6 +26,7 @@ awk '
         name = $0
         sub(/^.*Test +#[0-9]+: /, "", name)
         sub(/ \.+.*$/, "", name)
+        gsub(/%/, "%25", name); gsub(/:/, "%3A", name); gsub(/,/, "%2C", name)
         next
     }
     /^ *Start +[0-9]+: / || /tests passed, / || /% tests passed/ { flush(); next }

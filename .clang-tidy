@@ -1,4 +1,8 @@
 # ezMU static analysis (ADR 0018). Run with: ./scripts/check.ps1 -Tidy
+#
+# readability-redundant-member-init is off: it flags the `{}` default member initializers that
+# public aggregates need so GCC/Clang -Wmissing-field-initializers accepts designated
+# initializers that omit members (see .claude/rules/cpp-style.md).
 ---
 Checks: >
   -*,
@@ -18,7 +22,8 @@ Checks: >
   performance-*,
   readability-*,
   -readability-identifier-length,
-  -readability-magic-numbers
+  -readability-magic-numbers,
+  -readability-redundant-member-init
 
 WarningsAsErrors: ''
 HeaderFilterRegex: '.*[/\\](engine|framework|protocols|tools|samples)[/\\].*'

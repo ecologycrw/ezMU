@@ -1,6 +1,15 @@
-# LeakSanitizer suppressions for Linux CI (ADR 0020). Only third-party, uninstrumented Vulkan
-# components loaded at runtime belong here; leaks in ezMU code must never be suppressed.
+# LeakSanitizer suppressions for Linux CI (ADR 0020). Only third-party Vulkan components belong
+# here; leaks in ezMU code must never be suppressed.
+
+# Uninstrumented Vulkan libraries loaded at runtime, when their frames can be symbolized.
 leak:libvulkan.so
 leak:libvulkan_lvp.so
+leak:libgallium
 leak:libLLVM
 leak:libVkLayer_khronos_validation.so
+
+# One-time allocations made by the loader/driver while initializing (seen with Mesa lavapipe).
+# The driver library is unloaded before LSan reports, so its frames show as <unknown module>;
+# these ezMU wrappers (engine/rhi/src/vulkan.cpp) contain nothing but the Vulkan call.
+leak:ezmu::rhi::detail::driverCreateInstance
+leak:ezmu::rhi::detail::driverEnumeratePhysicalDevices

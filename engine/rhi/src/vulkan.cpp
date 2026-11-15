@@ -57,6 +57,15 @@ foundation::Error vkError(VkResult result, std::string_view what) {
             std::format("{} failed: {} ({})", what, toString(result), static_cast<int>(result))};
 }
 
+VkResult driverCreateInstance(const VkInstanceCreateInfo& info, VkInstance& instance) noexcept {
+    return vkCreateInstance(&info, nullptr, &instance);
+}
+
+VkResult driverEnumeratePhysicalDevices(VkInstance instance, std::uint32_t& count,
+                                        VkPhysicalDevice* devices) noexcept {
+    return vkEnumeratePhysicalDevices(instance, &count, devices);
+}
+
 std::string toLowerAscii(std::string_view text) {
     std::string result(text);
     std::ranges::transform(result, result.begin(), [](char c) {

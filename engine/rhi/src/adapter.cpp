@@ -218,12 +218,12 @@ int rank(AdapterType type, AdapterPreference preference) noexcept {
 foundation::Result<std::vector<AdapterCandidate>> evaluateAdapters(VkInstance instance,
                                                                    bool requirePresent) {
     std::uint32_t count = 0;
-    if (const VkResult result = vkEnumeratePhysicalDevices(instance, &count, nullptr);
+    if (const VkResult result = driverEnumeratePhysicalDevices(instance, count, nullptr);
         result != VK_SUCCESS) {
         return std::unexpected(vkError(result, "vkEnumeratePhysicalDevices"));
     }
     std::vector<VkPhysicalDevice> devices(count);
-    if (const VkResult result = vkEnumeratePhysicalDevices(instance, &count, devices.data());
+    if (const VkResult result = driverEnumeratePhysicalDevices(instance, count, devices.data());
         result != VK_SUCCESS && result != VK_INCOMPLETE) {
         return std::unexpected(vkError(result, "vkEnumeratePhysicalDevices"));
     }

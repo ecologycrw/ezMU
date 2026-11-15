@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <span>
 #include <string>
 #include <string_view>
@@ -22,6 +23,15 @@ namespace ezmu::rhi::detail {
 
 /// Error for a failed Vulkan call: the operation, the call and the VkResult name.
 [[nodiscard]] foundation::Error vkError(VkResult result, std::string_view what);
+
+// Calls that initialize the Vulkan loader and driver. They are separate, non-inline functions so
+// that LeakSanitizer can suppress the one-time allocations drivers make here
+// (.github/lsan-suppressions.txt): the driver library is unloaded before LSan reports, so its
+// own frames cannot be symbolized. Use them instead of calling the Vulkan functions directly.
+[[nodiscard]] VkResult driverCreateInstance(const VkInstanceCreateInfo& info,
+                                            VkInstance& instance) noexcept;
+[[nodiscard]] VkResult driverEnumeratePhysicalDevices(VkInstance instance, std::uint32_t& count,
+                                                      VkPhysicalDevice* devices) noexcept;
 
 /// View of the NUL-terminated string stored in a fixed-size Vulkan char array.
 [[nodiscard]] inline std::string_view fixedString(std::span<const char> text) noexcept {

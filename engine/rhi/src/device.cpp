@@ -194,7 +194,7 @@ foundation::Result<> createInstance(Device::Impl& impl, const DeviceDesc& desc) 
     info.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
     info.ppEnabledExtensionNames = extensions.data();
 
-    if (const VkResult result = vkCreateInstance(&info, nullptr, &impl.instance);
+    if (const VkResult result = detail::driverCreateInstance(info, impl.instance);
         result != VK_SUCCESS) {
         impl.instance = VK_NULL_HANDLE;
         if (result == VK_ERROR_INCOMPATIBLE_DRIVER || result == VK_ERROR_EXTENSION_NOT_PRESENT ||
