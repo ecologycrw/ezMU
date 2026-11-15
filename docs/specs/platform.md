@@ -1,6 +1,6 @@
 # Spec: platform
 
-- **Status:** In review
+- **Status:** Approved (2026-11-15, all proposals accepted)
 - **Layer:** L1
 - **Owner:** ecologycrw
 - **Related ADRs:** [0005](../adr/0005-target-platforms-and-compilers.md),
@@ -293,7 +293,7 @@ rules `.claude/rules/platform.md` / `rhi-vulkan.md`) lives in the
 [rhi spec](rhi.md#m1-implementation-plan). The cross-module decisions (D1 surface
 integration, D6 render thread in M1) are listed there too.
 
-## Open questions
+## Decisions (approved 2026-11-15: every proposal below was accepted)
 
 1. **Shared small types** (`Extent2D`, `Rect2D`): *proposal:* minimal `foundation` math value
    types now (no glm yet). *Alternative:* define them in `platform` and `rhi` separately until

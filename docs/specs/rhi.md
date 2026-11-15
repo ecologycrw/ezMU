@@ -1,6 +1,6 @@
 # Spec: rhi
 
-- **Status:** In review
+- **Status:** Approved (2026-11-15, all proposals accepted)
 - **Layer:** L1
 - **Owner:** ecologycrw
 - **Related ADRs:** [0005](../adr/0005-target-platforms-and-compilers.md),
@@ -425,7 +425,7 @@ Each step is a small, verified Conventional Commit (`git commit -s`). Order matt
   stay USB HID; headless backend in tests; no dependency on `rhi` (Vulkan interop is
   type-erased).
 
-## Open decisions
+## Decisions (approved 2026-11-15: every proposal below was accepted)
 
 - **D1 — Platform ↔ RHI surface integration.** *Proposal:* type-erased — `Window` exposes the
   instance extensions and `createVulkanSurface(void* vkInstance) → uint64_t`; the RHI takes the
