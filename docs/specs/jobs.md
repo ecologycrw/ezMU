@@ -264,10 +264,10 @@ and the runtime are caught automatically. ASan/UBSan presets stay as they are.
 
 - [x] `jobs.hpp` implemented in `foundation`, documented with thread rules and allocation
       behavior.
-- [ ] Unit tests above pass on all CI presets, including the new TSan job. *(Local: MSVC debug
-      and release; CI not run yet — the commits are not pushed.)*
-- [ ] `linux-clang-tsan` preset added (`CMakePresets.json`, `cmake/EzmuSanitizers.cmake`) and
-      run in CI. *(Preset, sanitizer selection and CI job added; not yet confirmed in CI.)*
+- [x] Unit tests above pass on all CI presets, including the new TSan job. *(CI run for
+      b7c3028, 2026-11-15: every job green; TSan ran the 90 non-GPU tests with no reports.)*
+- [x] `linux-clang-tsan` preset added (`CMakePresets.json`, `cmake/EzmuSanitizers.cmake`) and
+      run in CI.
 - [x] `engine/foundation/CLAUDE.md` updated (public API table, pitfalls: job lifetimes, inline
       mode needs `runPending`).
 - [x] `.claude/rules/threading.md` written (see [runtime spec](runtime.md#path-scoped-rules)).
