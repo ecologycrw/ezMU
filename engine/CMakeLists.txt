@@ -7,6 +7,9 @@ add_subdirectory(foundation)
 add_subdirectory(platform)
 add_subdirectory(rhi)
 
+# L2 — Services
+add_subdirectory(renderer)
+
 # --- Aggregate ---------------------------------------------------------------------------------
 # ezmu::engine bundles every Engine module for executables and external consumers. It is not a
 # module: engine and framework modules depend on the specific modules they use.
@@ -16,4 +19,5 @@ ezmu_add_aggregate(
     MODULES
         ezmu::foundation
         ezmu::platform
-        ezmu::rhi)
+        ezmu::rhi
+        ezmu::renderer)

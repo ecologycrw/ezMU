@@ -328,6 +328,34 @@ while (const RenderSnapshot* s = ring.beginRead(stop)) {
   allocator and `copyBufferToTexture` on the region, between transitions to `kTransferDst` and
   back to `kShaderRead`.
 
+### Differences from the sketch (M2 batch A, step 3: part 1)
+
+- **`Renderer::cancelPendingCapture()`** is new: it fails the pending capture with
+  `kUnsupported` and returns it, so the owner can answer the requester before destroying the
+  renderer (a destructor cannot return the result the sketch asked for).
+- **Capture requests.** A newer `captureId` replaces a pending one (the replaced id gets no
+  result); the runtime issues one capture at a time. Problems with a capture (swapchain images
+  without transfer-source usage, a non-8-bit format, readback buffer allocation) are reported in
+  the `CaptureResult`, never as an error of `render()` (M1's `ezmu_clear` treated the first one
+  as fatal).
+- **`create()` validates `offscreenFormat`**: an 8-bit color format (`kRgba8*`, `kBgra8*`), so
+  every output can be captured into a `foundation::Image`; otherwise `kInvalidArgument`.
+- **Skipped snapshots begin no rhi frame**, so `FrameReport::renderFrameIndex` advances only for
+  rendered frames (timeline 2 stays dense). An out-of-date swapchain still spends a frame.
+- **`FrameReport::waitTime`** is measured and filled by the render loop (runtime), which owns the
+  wait; `Renderer::render` leaves it 0.
+- **`RenderFeedbackQueue`** takes the report capacity in its constructor (default 8, at least
+  1); `droppedReports` counts per drain; the first fatal error is kept until drained and later
+  ones are ignored.
+- **`SnapshotRing`** adds `kMinSlots`/`kMaxSlots`, `slotCount()` and `isClosed()`. `beginRead`
+  returns nullptr on a stop request even if snapshots are published (it drains them only after
+  `close()`). Its mutex and condition variable live in the header (no pimpl, no allocation).
+- **Offscreen target state:** the target is left in its last state (render target, or transfer
+  source after a capture); every frame transitions it first.
+- **`ezmu_clear` keeps its own render loop** until step 6 of the batch A plan, which ports the
+  sample to runtime and deletes the M1 copy of the capture code.
+- **`reset()` keeps capacity** is tested with part 2: part 1 snapshots have no containers.
+
 ## Threading
 
 - **Game (main) thread:** `SnapshotRing::beginWrite/endWrite`, `RenderResources`,
@@ -388,12 +416,12 @@ workflow as rhi ([ADR 0020](../adr/0020-gpu-tests-headless-and-software-vulkan-i
 
 ## Done when
 
-- [ ] `engine/renderer` module (`ezmu_add_module(NAME renderer LAYER 2 …)`) with part 1 API,
+- [x] `engine/renderer` module (`ezmu_add_module(NAME renderer LAYER 2 …)`) with part 1 API,
       documented with thread rules; added to `ezmu::engine`.
 - [ ] Part 1 tests pass on all CI presets (GPU tests on lavapipe in Linux CI and on the owner's
-      GPU), no validation messages.
+      GPU), no validation messages. *(Local MSVC run on the owner's GPU passes; CI pending.)*
 - [ ] Part 2 API and tests, after the rhi M2 update (batch B).
-- [ ] `engine/renderer/CLAUDE.md` and `.claude/rules/renderer.md` (renderer never reads game
+- [x] `engine/renderer/CLAUDE.md` and `.claude/rules/renderer.md` (renderer never reads game
       state; producer headers stay free of rhi; no per-frame allocation once warm).
 - [ ] Overview and roadmap updated.
 
