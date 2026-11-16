@@ -441,8 +441,10 @@ Each step is a small, verified Conventional Commit (`git commit -s`). Order matt
    `samples.clear` unchanged or adapted to the capture log line.
 7. **`docs: …`** — overview (threads, modules), roadmap (M2 progress), `.claude/rules/threading.md`.
 
-Batch B (separate review): rhi M2 update (pipelines, uploads, Slang toolchain + possible ADR),
+Batch B (separate review): rhi M2 update (pipelines, uploads, Slang toolchain, ADR 0023),
 renderer part 2, `debug` spec + ADR 0022 (Dear ImGui integration), overlay in `ezmu_clear`.
+The runtime additions for the overlay (`AppDesc::debugOverlay`, `AppContext::debugOverlay()`,
+`EZMU_DEBUG_TOOLS`) are specified in the [debug spec](debug.md#changes-to-other-specs-batch-b).
 
 ### Path-scoped rules
 

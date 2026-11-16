@@ -26,3 +26,5 @@ Use [0000-template.md](0000-template.md) for new ADRs.
 | [0019](0019-ai-assisted-development-workflow.md) | AI-assisted development workflow | Accepted |
 | [0020](0020-gpu-tests-headless-and-software-vulkan-in-ci.md) | GPU tests: headless rendering, reference images and software Vulkan in CI | Accepted |
 | [0021](0021-stb-for-png-image-io.md) | stb for PNG image I/O in foundation | Accepted |
+| [0022](0022-dear-imgui-integration.md) | Dear ImGui integration: in-house backends over platform and renderer | Accepted |
+| [0023](0023-slang-compiler-from-vcpkg-as-build-tool.md) | Slang compiler from vcpkg as a build tool | Accepted |

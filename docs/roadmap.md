@@ -31,9 +31,11 @@ ASan/LeakSanitizer (today only Vulkan object leaks are checked for it, by valida
 ## M2 — Runtime and render thread
 
 Specs, batch A (approved 2026-11-15): [jobs](specs/jobs.md), [renderer](specs/renderer.md) (bootstrap:
-render snapshots), [runtime](specs/runtime.md). Batch B (to be written): rhi update (pipelines,
-uploads, Slang toolchain), renderer part 2 (2D draw lists, textures), `debug`, ADR for the
-Dear ImGui integration.
+render snapshots), [runtime](specs/runtime.md). Batch B (approved 2026-11-15):
+[rhi M2 update](specs/rhi.md#m2-update-pipelines-uploads-and-bindless-textures) (pipelines,
+uploads, bindless textures), [renderer part 2](specs/renderer.md) (2D draw lists, textures),
+[debug](specs/debug.md), ADRs [0022](adr/0022-dear-imgui-integration.md) (Dear ImGui
+integration) and [0023](adr/0023-slang-compiler-from-vcpkg-as-build-tool.md) (Slang compiler).
 
 - `runtime` (application lifecycle, game loop, game states)
 - Render thread with extraction/snapshot model (replaces the `ezmu_clear` mailbox)

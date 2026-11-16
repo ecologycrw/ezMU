@@ -1,6 +1,8 @@
 # Spec: rhi
 
-- **Status:** Implemented (M1, 2026-11-15; approved 2026-11-15, all proposals accepted)
+- **Status:** Implemented (M1, 2026-11-15; approved 2026-11-15, all proposals accepted).
+  M2 update (pipelines, uploads, bindless textures): Approved 2026-11-15 — see the
+  [last section](#m2-update-pipelines-uploads-and-bindless-textures)
 - **Layer:** L1
 - **Owner:** ecologycrw
 - **Related ADRs:** [0005](../adr/0005-target-platforms-and-compilers.md),
@@ -574,3 +576,221 @@ Each step is a small, verified Conventional Commit (`git commit -s`). Order matt
 - **D7 — Scope.** *Proposal:* no pipelines/shaders/triangle in M1 (the Slang toolchain is its
   own step at the start of the renderer work). *Alternative:* add a triangle to M1 to validate
   the Slang build step early.
+
+---
+
+## M2 update: pipelines, uploads and bindless textures
+
+- **Status:** Approved (M2 batch B, 2026-11-15; every proposal accepted)
+- **Related:** [ADR 0010](../adr/0010-slang-shading-language.md),
+  [ADR 0023](../adr/0023-slang-compiler-from-vcpkg-as-build-tool.md),
+  [renderer spec, part 2](renderer.md), [debug spec](debug.md)
+
+### Purpose of the update
+
+The renderer's 2D pass (part 2 of the [renderer spec](renderer.md)), and therefore the debug
+overlay, needs the first **draws**: graphics pipelines built from Slang-compiled SPIR-V, vertex
+and index data uploaded every frame, textures uploaded from the CPU and sampled in shaders,
+blending, scissor and push constants. This is the "pipelines, shaders, draws" row deferred by
+decision D7. The update stays as thin as M1: it adds only what that pass needs, shaped so the
+later renderer (meshes, materials, terrain) grows on top without breaking it.
+
+Not in this update: depth testing and depth formats in pipelines, compute pipelines, mipmap
+generation, multisampling, per-shader descriptor layouts from Slang reflection, shader
+hot-reload, GPU timestamps, async readback. Each comes with its consumer.
+
+### Scope
+
+| In this update | Later |
+|---|---|
+| `BufferUsage` flags (vertex, index, transfer, storage) | Buffer device address / vertex pulling |
+| Per-frame **upload allocator** (linear, per frame slot) | Dedicated transfer queue, staging pools |
+| `copyBufferToTexture` (whole texture or sub-rectangle) | Mip chains, arrays, cube maps, compressed formats |
+| Samplers (filter, address mode) | Anisotropy, comparison samplers |
+| **Bindless** heap: one global set, sampled textures + samplers by index | Storage images, per-material sets |
+| Graphics pipelines: SPIR-V stages, vertex layout, blend presets, color formats, dynamic viewport/scissor | Depth/stencil state, MSAA, on-disk pipeline cache |
+| One **universal pipeline layout** (global set + 128 bytes of push constants) | Layouts derived from Slang reflection (ADR 0010) |
+| Draws: bind pipeline, vertex/index buffers, push constants, `draw`, `drawIndexed` | Indirect draws, compute dispatch |
+| Build step `ezmu_add_shaders()`: `.slang` → SPIR-V embedded in the module | Hot-reload, shader permutations |
+
+### Public API additions (sketch)
+
+```cpp
+// resources.hpp
+enum class BufferUsage : std::uint8_t {   // flags, same helpers as TextureUsage
+    kNone = 0, kTransferSrc = 1U << 0U, kTransferDst = 1U << 1U,
+    kVertex = 1U << 2U, kIndex = 1U << 3U, kStorage = 1U << 4U,
+};
+struct BufferDesc {                        // gains usage (M1 buffers: transfer only)
+    std::uint64_t size = 0;
+    MemoryLocation location = MemoryLocation::kGpu;
+    BufferUsage usage = BufferUsage::kTransferSrc | BufferUsage::kTransferDst;
+    std::string_view debugName{};
+};
+
+enum class Filter : std::uint8_t { kNearest, kLinear };
+enum class AddressMode : std::uint8_t { kClampToEdge, kRepeat, kMirroredRepeat };
+struct SamplerDesc {
+    Filter minFilter = Filter::kLinear;
+    Filter magFilter = Filter::kLinear;
+    AddressMode addressU = AddressMode::kClampToEdge;
+    AddressMode addressV = AddressMode::kClampToEdge;
+    std::string_view debugName{};
+};
+using SamplerHandle = Handle<struct SamplerTag>;
+
+/// Index of a sampled texture or a sampler in the global bindless set, passed to shaders
+/// through push constants. Stable for the lifetime of the resource; recycled only after its
+/// deferred destruction.
+enum class BindlessIndex : std::uint32_t { kInvalid = 0xFFFFFFFFU };
+
+// device.hpp
+[[nodiscard]] foundation::Result<SamplerHandle> createSampler(const SamplerDesc& desc);
+void destroy(SamplerHandle sampler);
+[[nodiscard]] BindlessIndex bindlessIndex(TextureHandle texture) const;  ///< kSampled only.
+[[nodiscard]] BindlessIndex bindlessIndex(SamplerHandle sampler) const;
+[[nodiscard]] foundation::Result<PipelineHandle>
+createGraphicsPipeline(const GraphicsPipelineDesc& desc);
+void destroy(PipelineHandle pipeline);
+
+// pipeline.hpp
+struct ShaderStageDesc {
+    std::span<const std::uint32_t> spirv{};   ///< From ezmu_add_shaders (embedded SPIR-V).
+    std::string_view entryPoint = "main";
+};
+enum class VertexFormat : std::uint8_t { kFloat2, kFloat3, kFloat4, kRgba8Unorm, kUint32 };
+struct VertexAttribute {
+    std::uint32_t location = 0;
+    VertexFormat format = VertexFormat::kFloat4;
+    std::uint32_t offset = 0;
+};
+struct VertexLayout {
+    std::uint32_t stride = 0;
+    std::span<const VertexAttribute> attributes{};   ///< One interleaved binding (slot 0).
+};
+enum class BlendMode : std::uint8_t { kOpaque, kAlpha, kPremultipliedAlpha, kAdditive };
+enum class CullMode : std::uint8_t { kNone, kBack, kFront };
+struct GraphicsPipelineDesc {
+    ShaderStageDesc vertex{};
+    ShaderStageDesc fragment{};
+    VertexLayout vertexLayout{};
+    std::span<const Format> colorFormats{};   ///< Dynamic rendering: formats at creation.
+    BlendMode blend = BlendMode::kOpaque;     ///< Applied to every color attachment.
+    CullMode cull = CullMode::kNone;
+    std::string_view debugName{};
+};
+using PipelineHandle = Handle<struct PipelineTag>;
+inline constexpr std::uint32_t kMaxPushConstantBytes = 128;   ///< Vulkan's guaranteed minimum.
+
+// frame.hpp
+struct UploadAllocation {
+    BufferHandle buffer{};        ///< Persistently mapped; usage vertex | index | transfer-src.
+    std::uint64_t offset = 0;
+    std::span<std::byte> data{};  ///< Write here; valid until the frame ends.
+};
+/// Linear allocation from this frame slot's upload buffer, recycled when the slot is reused.
+/// Grows (a bigger buffer; the old one is deferred-destroyed) only when a frame needs more
+/// than any previous one, so the steady state does not allocate.
+[[nodiscard]] foundation::Result<UploadAllocation> allocateUpload(std::uint64_t size,
+                                                                  std::uint64_t alignment = 16);
+
+// command_list.hpp
+enum class IndexType : std::uint8_t { kUint16, kUint32 };
+void copyBufferToTexture(BufferHandle src, std::uint64_t srcOffset, TextureHandle dst,
+                         const foundation::Rect2D& region = {});   ///< Empty = whole texture.
+void bindPipeline(PipelineHandle pipeline);       ///< Also binds the global bindless set.
+void setViewport(const foundation::Rect2D& rect); ///< Default: the rendering area.
+void setScissor(const foundation::Rect2D& rect);  ///< Default: the rendering area.
+void bindVertexBuffer(BufferHandle buffer, std::uint64_t offset = 0);
+void bindIndexBuffer(BufferHandle buffer, std::uint64_t offset, IndexType type);
+void pushConstants(std::span<const std::byte> data, std::uint32_t offset = 0);  ///< ≤ 128 B.
+void draw(std::uint32_t vertexCount, std::uint32_t instanceCount = 1,
+          std::uint32_t firstVertex = 0, std::uint32_t firstInstance = 0);
+void drawIndexed(std::uint32_t indexCount, std::uint32_t instanceCount = 1,
+                 std::uint32_t firstIndex = 0, std::int32_t vertexOffset = 0,
+                 std::uint32_t firstInstance = 0);
+```
+
+Draws are valid only between `beginRendering` and `endRendering`, after `bindPipeline`
+(assertions, like other M1 misuse). Textures sampled by a draw must be in `kShaderRead`; the
+transition stays explicit (decision D4) until the render graph automates it.
+
+### Shaders and the build step
+
+- Engine shaders are `.slang` files next to the module that owns them
+  (`engine/renderer/shaders/`; test shaders in `engine/rhi/tests/shaders/`).
+- `cmake/EzmuShaders.cmake` provides `ezmu_add_shaders(TARGET <target> SOURCES <files...>
+  ENTRY_POINTS <name:stage...>)`: runs `slangc` at build time (`-target spirv`,
+  `-profile spirv_1_6`, warnings as errors) and generates a private `.cpp`/`.hpp` per shader
+  with `std::array<std::uint32_t, N>` SPIR-V constants, rebuilt on change through `slangc`
+  depfiles. Module build files call the helper; only the helper calls `find_program(slangc)`.
+- `slangc` comes from vcpkg as a **host tool**
+  ([ADR 0023](../adr/0023-slang-compiler-from-vcpkg-as-build-tool.md)); the engine does not link
+  the Slang library in M2.
+- **Universal pipeline layout:** every pipeline uses the same layout — set 0 is the bindless
+  heap (`Texture2D textures[]`, `SamplerState samplers[]`, update-after-bind, partially bound)
+  and 128 bytes of push constants visible to all stages. Shaders declare the heap through a
+  shared `ezmu/bindless.slang` module. With one fixed layout nothing has to be kept in sync by
+  hand per shader; per-shader layouts derived from Slang reflection (ADR 0010) arrive with
+  materials, when layouts start to differ.
+
+### Implementation notes
+
+- **Bindless heap:** one descriptor pool and set created with the device, capacities
+  `kMaxBindlessTextures = 16384` and `kMaxBindlessSamplers = 64` (checked against device limits;
+  `kUnsupported` if lower). Slots are written at creation (`kSampled` textures, samplers) and
+  freed with the resource's deferred destruction, so an in-flight frame never sees a reused
+  slot. Writes happen on the device's thread, before the submission that uses them.
+- **Pipelines:** `VkPipelineRenderingCreateInfo` for formats, dynamic viewport/scissor, no
+  `VkRenderPass` (`.claude/rules/rhi-vulkan.md`). Shader modules live only during pipeline
+  creation. Pipelines go through deferred destruction like other resources.
+- **Upload allocator:** per frame slot, a `kUpload` buffer starting at 1 MiB and doubling on
+  demand; offsets honor the requested alignment and the device's buffer offset alignments.
+- `copyBufferToTexture` requires `kTransferDst` usage and the texture in `kTransferDst`; rows
+  are tightly packed.
+- Every new object is debug-named; validation (with sync validation) stays clean in every test.
+
+### Testing (GPU tests: label `gpu`, headless device, validation fixture)
+
+- **Triangle and quad:** test shaders draw a colored triangle and a full-screen quad, compared
+  with reference images (`reference/draw_*.png`).
+- **Textured quad:** a 4×4 checkerboard uploaded with `allocateUpload` + `copyBufferToTexture`
+  and sampled with `kNearest` through its `BindlessIndex`; exact pixel values.
+- **Sub-rectangle update:** a 2×2 region updated in a later frame; only that region changes.
+- **Scissor and blending:** `setScissor` limits writes; `kAlpha` and `kPremultipliedAlpha`
+  produce the expected values for exactly representable colors.
+- **Upload allocator:** 200 frames with varying upload sizes: growth happens, then stops;
+  deferred destruction drains; no validation messages.
+- **Bindless recycling:** sampled textures created and destroyed over many frames; an index is
+  reused only after the frames that could use it completed.
+- **No-GPU:** flag helpers; the embedded SPIR-V of every test shader starts with the SPIR-V
+  magic number (proves the build step ran on every preset); a pipeline with an empty SPIR-V
+  span fails with `kInvalidArgument` before reaching Vulkan.
+
+### Done when (M2 update)
+
+- [ ] API above implemented and documented; no Vulkan types in public headers (rule 5).
+- [ ] `ezmu_add_shaders` and `ezmu/bindless.slang`; `shader-slang` in `vcpkg.json` as a host
+      dependency; ADR 0008 table amended (ADR 0023, accepted 2026-11-15).
+- [ ] GPU tests pass on lavapipe (Linux CI) and on the owner's GPU; non-GPU tests everywhere.
+- [ ] `engine/rhi/CLAUDE.md` and `.claude/rules/rhi-vulkan.md` updated (universal layout,
+      bindless rules, upload allocator, shaders live next to their module).
+
+### Decisions (approved 2026-11-15: every proposal below was accepted)
+
+- **D8 — Slang toolchain.** *Proposal:* `slangc` from the vcpkg `shader-slang` port as a host
+  tool, pinned by the baseline (ADR 0023). *Alternatives:* the Vulkan SDK's `slangc` (absent on
+  CI runners, version differs per machine); building Slang from source (slow, large).
+- **D9 — Pipeline layout.** *Proposal:* one universal layout (bindless set + 128 bytes of push
+  constants) for every pipeline. *Alternatives:* per-pipeline layouts from Slang reflection now
+  (the ADR 0010 end state, but no M2 consumer needs different layouts); hand-written
+  per-pipeline layouts (what ADR 0010 wants to avoid).
+- **D10 — Vertex input.** *Proposal:* classic vertex input (one interleaved binding, declared
+  attributes) plus index buffers. *Alternative:* vertex pulling through buffer device address
+  (flexible, bindless-friendly, harder to inspect in RenderDoc; can be added later).
+- **D11 — Per-frame data.** *Proposal:* a linear upload allocator per frame slot, exposed on
+  `Frame`. *Alternative:* every caller creates and recycles its own `kUpload` buffers (more
+  code everywhere, easy to overwrite data the GPU still reads).
+- **D12 — Embedded SPIR-V.** *Proposal:* compiled shaders are embedded in the binary as
+  constants. *Alternative:* `.spv` files loaded at run time (needs the VFS/assets path, which
+  does not exist yet; useful for hot-reload later).

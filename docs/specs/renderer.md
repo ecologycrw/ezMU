@@ -255,15 +255,24 @@ struct TextureCreate {
     std::vector<std::uint8_t> pixels;   ///< Tightly packed; moved, never copied again.
     std::string debugName;
 };
+/// Replaces a sub-rectangle (added in batch B for ImGui's dynamic textures, ADR 0022).
+struct TextureUpdate {
+    TextureId id{};
+    foundation::Rect2D region{};
+    std::vector<std::uint8_t> pixels;   ///< Tightly packed rows of `region`.
+};
 struct TextureDestroy { TextureId id{}; };
-using ResourceCommand = std::variant<TextureCreate, TextureDestroy>;
+using ResourceCommand = std::variant<TextureCreate, TextureUpdate, TextureDestroy>;
 
-/// Thread-safety: game (main) thread only in M2. Allocation: only when textures are created.
+/// Thread-safety: game (main) thread only in M2. Allocation: only when textures are created
+/// or updated (pixel payloads).
 class RenderResources {
 public:
     [[nodiscard]] TextureId createTexture(foundation::Extent2D size, TextureFormat2D format,
                                           std::vector<std::uint8_t> pixels,
                                           std::string_view debugName = {});
+    void updateTexture(TextureId id, const foundation::Rect2D& region,
+                       std::vector<std::uint8_t> pixels);
     void destroyTexture(TextureId id);    ///< Deferred: in-flight frames may still use it.
     /// Moves the queued commands into `snapshot` (called by runtime during extraction).
     void flushInto(RenderSnapshot& snapshot);
@@ -314,8 +323,10 @@ while (const RenderSnapshot* s = ring.beginRead(stop)) {
   and translation), indexed draws. Exact shape is decided in the rhi M2 update.
 - **Color:** vertex colors are sRGB-encoded (as ImGui and most UI tools produce them) and are
   linearized in the shader before blending into the sRGB target.
-- ImGui ≥ 1.92 can ask renderers to create and update textures incrementally. If ADR 0022
-  (batch B) picks such a version, a `TextureUpdate` (sub-rectangle) command is added here.
+- ImGui ≥ 1.92 asks renderers to create and update textures incrementally; ADR 0022 (batch B)
+  picks 1.93, hence `TextureUpdate`. An update is applied with the rhi upload
+  allocator and `copyBufferToTexture` on the region, between transitions to `kTransferDst` and
+  back to `kShaderRead`.
 
 ## Threading
 
@@ -370,7 +381,8 @@ workflow as rhi ([ADR 0020](../adr/0020-gpu-tests-headless-and-software-vulkan-i
 - Pipelined run: a producer thread and the render thread exchange 300 snapshots through the
   ring with changing colors and sizes; no validation messages, reports in order.
 - Part 2: reference images for solid quads, textured quads, clip rectangles, alpha blending,
-  `vertexOffset`, display scale 1.5; texture create/destroy churn over 200 frames; failed
+  `vertexOffset`, display scale 1.5; `TextureUpdate` changes only its region; texture
+  create/update/destroy churn over 200 frames; failed
   creation renders the "missing" texture and reports the error.
 - The swapchain path stays covered by `samples.clear` once `ezmu_clear` runs on `runtime`.
 
