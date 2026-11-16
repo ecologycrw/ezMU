@@ -186,6 +186,42 @@ exceptions for control flow" ([ADR 0018](../adr/0018-code-commit-and-branch-conv
   runtime can call a `platform` helper; added together with profiling).
 - Memory orderings are documented next to every atomic; relaxed only for statistics.
 
+### Differences from the sketch (M2 batch A, step 2)
+
+- **Storage constant and trait.** `kJobStorageSize` (48) is a namespace-scope constant, and the
+  compile-time check is a public concept, `JobCallable<F>`: invocable with no arguments, at most
+  48 bytes and `alignof(std::max_align_t)`, nothrow-move-constructible and -destructible, and
+  not `Job` itself. Tests `STATIC_CHECK` it; `Job`'s converting constructor is constrained by it.
+- **Empty `Job`.** `Job` is default-constructible (empty, also the moved-from state) and has
+  `isEmpty()`; the queue slots need it. `operator()` is `noexcept` (an escaping exception
+  terminates) and asserts on an empty job. Submitting an empty job asserts.
+- **Group completion uses the condition variable, not `std::atomic::wait`.** A waiter may
+  destroy its `JobGroup` as soon as the count reaches zero, so `notify_all` on the group's atomic
+  after the last decrement would touch a destroyed object. The completing thread instead takes
+  the queue mutex briefly and notifies the system's single condition variable, which workers and
+  waiters share (waiters wake for new jobs too, and help). Cost: one lock and a `notify_all` per
+  completed group, which can wake idle workers spuriously; revisit with profiling.
+- **Callable destroyed before completion.** A job's callable is destroyed before its group is
+  decremented, so a group owner may free captured state as soon as `isDone()` is true.
+- **`JobGroup` destructor.** It asserts when the group is not done and then waits for it
+  (helping), so even in release builds jobs never decrement a destroyed group. A group remembers
+  the `JobSystem` it was submitted to; using one group with two systems asserts.
+- **Destruction.** `~JobSystem` stops the workers, which drain the queue first, including jobs
+  that running jobs submit (nested submits during destruction are therefore allowed); in inline
+  mode the destructor runs them on the calling thread. Only after the queue is drained and
+  closed does `submit` assert.
+- **`parallelFor`.** With a single chunk, or in inline mode, the calling thread runs the chunks
+  directly without using the queue (it does not run other queued jobs; in inline mode only
+  `wait`, `runPending` and the destructor do). A grain of 0 is treated as 1. Otherwise it
+  submits `min(workerCount, chunks - 1)` helper jobs, as sketched.
+- **`runPending`.** Runs at most as many jobs as were queued when it was called; jobs those jobs
+  submit wait for the next call, so a job that resubmits itself cannot make it loop forever.
+- **Class shape.** `JobSystem` is non-copyable and non-movable and keeps its state behind a
+  private `Impl` (no `<thread>`/`<mutex>` in the public header). `stats()` reads each counter
+  independently; the fields are not one consistent snapshot.
+- **ThreadSanitizer.** Verified only in CI (`linux-clang-tsan`, Linux): MSVC has no TSan, so the
+  Windows development machine only validates the preset configuration.
+
 ## Dependencies
 
 - Standard library only (`<thread>`, `<atomic>`, `<mutex>`, `<condition_variable>`).
@@ -226,14 +262,15 @@ and the runtime are caught automatically. ASan/UBSan presets stay as they are.
 
 ## Done when
 
-- [ ] `jobs.hpp` implemented in `foundation`, documented with thread rules and allocation
+- [x] `jobs.hpp` implemented in `foundation`, documented with thread rules and allocation
       behavior.
-- [ ] Unit tests above pass on all CI presets, including the new TSan job.
+- [ ] Unit tests above pass on all CI presets, including the new TSan job. *(Local: MSVC debug
+      and release; CI not run yet — the commits are not pushed.)*
 - [ ] `linux-clang-tsan` preset added (`CMakePresets.json`, `cmake/EzmuSanitizers.cmake`) and
-      run in CI.
-- [ ] `engine/foundation/CLAUDE.md` updated (public API table, pitfalls: job lifetimes, inline
+      run in CI. *(Preset, sanitizer selection and CI job added; not yet confirmed in CI.)*
+- [x] `engine/foundation/CLAUDE.md` updated (public API table, pitfalls: job lifetimes, inline
       mode needs `runPending`).
-- [ ] `.claude/rules/threading.md` written (see [runtime spec](runtime.md#path-scoped-rules)).
+- [x] `.claude/rules/threading.md` written (see [runtime spec](runtime.md#path-scoped-rules)).
 
 ## Decisions (approved 2026-11-15: every proposal below was accepted)
 

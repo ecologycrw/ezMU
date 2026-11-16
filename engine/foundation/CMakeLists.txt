@@ -14,6 +14,7 @@ ezmu_add_module(
         src/image.cpp
         src/image_compare.cpp
         src/image_io.cpp
+        src/jobs.cpp
         src/log.cpp
         src/result.cpp)
 
@@ -29,6 +30,7 @@ ezmu_add_module_tests(
         tests/image_compare_tests.cpp
         tests/image_io_tests.cpp
         tests/image_tests.cpp
+        tests/jobs_tests.cpp
         tests/log_tests.cpp
         tests/result_tests.cpp
         tests/version_tests.cpp)
