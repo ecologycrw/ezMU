@@ -12,7 +12,7 @@ endif()
 # --- Options -----------------------------------------------------------------
 option(EZMU_BUILD_TESTS "Build ezMU unit tests" ${PROJECT_IS_TOP_LEVEL})
 option(EZMU_BUILD_SAMPLES "Build ezMU samples" ${PROJECT_IS_TOP_LEVEL})
-option(EZMU_ENABLE_SANITIZERS "Build with AddressSanitizer (and UBSan where supported)" OFF)
+option(EZMU_ENABLE_SANITIZERS "Build with the sanitizer selected by EZMU_SANITIZER (default: ASan + UBSan)" OFF)
 option(EZMU_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
 
 # --- Language ----------------------------------------------------------------

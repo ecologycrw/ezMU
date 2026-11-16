@@ -76,6 +76,16 @@
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "EZMU_ENABLE_SANITIZERS": "ON" }
     },
     {
+      "name": "linux-clang-tsan",
+      "displayName": "Linux Clang Debug + TSan",
+      "inherits": "linux-clang-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "EZMU_ENABLE_SANITIZERS": "ON",
+        "EZMU_SANITIZER": "thread"
+      }
+    },
+    {
       "name": "linux-gcc-debug",
       "displayName": "Linux GCC Debug",
       "inherits": "linux-gcc-base",
@@ -94,6 +104,7 @@
     { "name": "windows-msvc-asan", "configurePreset": "windows-msvc-asan" },
     { "name": "linux-clang-debug", "configurePreset": "linux-clang-debug" },
     { "name": "linux-clang-asan", "configurePreset": "linux-clang-asan" },
+    { "name": "linux-clang-tsan", "configurePreset": "linux-clang-tsan" },
     { "name": "linux-gcc-debug", "configurePreset": "linux-gcc-debug" },
     { "name": "linux-gcc-asan", "configurePreset": "linux-gcc-asan" }
   ],
@@ -109,6 +120,13 @@
     { "name": "windows-msvc-asan", "inherits": "test-base", "configurePreset": "windows-msvc-asan" },
     { "name": "linux-clang-debug", "inherits": "test-base", "configurePreset": "linux-clang-debug" },
     { "name": "linux-clang-asan", "inherits": "test-base", "configurePreset": "linux-clang-asan" },
+    {
+      "name": "linux-clang-tsan",
+      "inherits": "test-base",
+      "configurePreset": "linux-clang-tsan",
+      "filter": { "exclude": { "label": "gpu" } },
+      "environment": { "TSAN_OPTIONS": "halt_on_error=1:second_deadlock_stack=1" }
+    },
     { "name": "linux-gcc-debug", "inherits": "test-base", "configurePreset": "linux-gcc-debug" },
     { "name": "linux-gcc-asan", "inherits": "test-base", "configurePreset": "linux-gcc-asan" }
   ]

@@ -50,6 +50,9 @@ jobs:
           - { os: windows-latest, preset: windows-msvc-release }
           - { os: ubuntu-24.04, preset: linux-clang-asan, cxx: clang++-19 }
           - { os: ubuntu-24.04, preset: linux-gcc-asan, cxx: g++-14 }
+          # ThreadSanitizer (jobs spec, decision J4). Its test preset excludes the "gpu" label:
+          # uninstrumented driver threads (lavapipe) would only produce noise.
+          - { os: ubuntu-24.04, preset: linux-clang-tsan, cxx: clang++-19 }
 
     steps:
       - uses: actions/checkout@v5
@@ -71,6 +74,12 @@ jobs:
           # Software Vulkan 1.3 (Mesa lavapipe), the loader and the validation layer for GPU
           # tests (ADR 0020).
           sudo apt-get install -y libvulkan1 mesa-vulkan-drivers vulkan-validationlayers
+
+      # Recent runner kernels use 32 bits of mmap randomization, which TSan's fixed shadow
+      # memory layout does not support ("unexpected memory mapping").
+      - name: Reduce ASLR entropy for ThreadSanitizer
+        if: contains(matrix.preset, 'tsan')
+        run: sudo sysctl -w vm.mmap_rnd_bits=28
 
       - name: Set up MSVC environment
         if: runner.os == 'Windows'
