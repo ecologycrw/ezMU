@@ -30,6 +30,11 @@ ASan/LeakSanitizer (today only Vulkan object leaks are checked for it, by valida
 
 ## M2 — Runtime and render thread
 
+Specs, batch A (approved 2026-11-15): [jobs](specs/jobs.md), [renderer](specs/renderer.md) (bootstrap:
+render snapshots), [runtime](specs/runtime.md). Batch B (to be written): rhi update (pipelines,
+uploads, Slang toolchain), renderer part 2 (2D draw lists, textures), `debug`, ADR for the
+Dear ImGui integration.
+
 - `runtime` (application lifecycle, game loop, game states)
 - Render thread with extraction/snapshot model (replaces the `ezmu_clear` mailbox)
 - `foundation`: job system basics
