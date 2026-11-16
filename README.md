@@ -8,9 +8,9 @@ animation, world/entities, input — plus a networking layer that connects that 
 their own server, defines their own rules and supplies their own assets, on top of the same
 technological foundation.
 
-> **Status:** early bootstrap. The project skeleton (build, CI, documentation, conventions) is
-> in place; engine modules are being designed and implemented incrementally. See
-> [docs/roadmap.md](docs/roadmap.md).
+> **Status:** early development. Milestone M1 "First pixels" is implemented: an SDL3 window,
+> a Vulkan 1.3 RHI and a sample that clears the screen on a dedicated render thread. Engine
+> modules are designed and implemented incrementally. See [docs/roadmap.md](docs/roadmap.md).
 
 ## Principles
 
@@ -40,7 +40,22 @@ Requirements:
 
 - CMake ≥ 3.28 and Ninja
 - **Windows:** Visual Studio 2026 (MSVC) · **Linux:** Clang ≥ 19 or GCC ≥ 14
-- [vcpkg](https://github.com/microsoft/vcpkg) with `VCPKG_ROOT` set
+- [vcpkg](https://github.com/microsoft/vcpkg) with `VCPKG_ROOT` set (it builds SDL3, volk,
+  VMA, stb and Catch2)
+- To run anything that renders: a GPU driver with **Vulkan 1.3**. Debug builds and tests also
+  need the **Khronos validation layer**:
+  - **Windows:** install the [Vulkan SDK](https://vulkan.lunarg.com/) (it provides the
+    validation layer; the Vulkan loader comes with the GPU driver).
+  - **Linux (Debian/Ubuntu):** `libvulkan1` and `vulkan-validationlayers`; Mesa
+    `mesa-vulkan-drivers` adds lavapipe, a software Vulkan 1.3 device, if you have no GPU.
+
+Linux also needs the system packages the vcpkg SDL3 port builds against (X11 and Wayland):
+
+```bash
+sudo apt-get install -y ninja-build pkg-config libx11-dev libxext-dev libxrandr-dev \
+  libxcursor-dev libxi-dev libxss-dev libxtst-dev libxfixes-dev libxinerama-dev libxft-dev \
+  libwayland-dev libxkbcommon-dev wayland-protocols libegl1-mesa-dev
+```
 
 Windows (PowerShell):
 
@@ -56,6 +71,25 @@ cmake --preset linux-clang-debug
 cmake --build --preset linux-clang-debug
 ctest --preset linux-clang-debug
 ```
+
+GPU tests (CTest label `gpu`) are **skipped**, not failed, when there is no usable Vulkan 1.3
+device or validation layer; set `EZMU_REQUIRE_GPU=1` to turn those skips into failures (Linux
+CI does, on lavapipe). `EZMU_GPU=<name substring>` picks an adapter.
+
+### Running the sample
+
+`ezmu_clear` opens a window and clears it every frame from a dedicated render thread. It is
+built to `build/<preset>/samples/clear/`, e.g.:
+
+```bash
+build/linux-clang-debug/samples/clear/ezmu_clear
+```
+
+Escape quits and F12 saves the next frame to `ezmu_clear.png`. For automated checks,
+`ezmu_clear --frames 60 --capture out.png` renders 60 frames, writes the last one as a PNG and
+exits; `--validation sync` adds synchronization validation and any validation message makes
+it exit with an error. It exits with code 77 (skipped) when there is no display or Vulkan
+device.
 
 ## Contributing
 

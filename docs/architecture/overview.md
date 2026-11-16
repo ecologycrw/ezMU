@@ -49,7 +49,12 @@ This document is the map of ezMU. The reasoning behind each part is in the
    Engine module for executables and external consumers. It is not a module, and modules may
    not depend on it: they declare the specific modules they use.
 
-## Planned modules
+## Modules
+
+Implemented so far (end of M1): `foundation` (partially: `Result`, asserts, logging, geometry,
+`Image` + PNG I/O), `platform` and `rhi` (without pipelines/shaders yet), plus the
+`ezmu::engine` aggregate and the samples `ezmu_hello` and `ezmu_clear`. Everything else below
+is planned.
 
 | Layer | Module | Responsibility |
 |---|---|---|
@@ -76,6 +81,14 @@ This document is the map of ezMU. The reasoning behind each part is in the
 - **Job system workers:** asset loading, decoding and parallel tasks.
 
 See [ADR 0012](../adr/0012-dedicated-render-thread.md).
+
+Today (M1) the composition root is the sample `ezmu_clear`: the main thread creates the
+platform, window, RHI device and swapchain, then hands the device and swapchain to a
+`std::jthread` render thread; the two share only a small mailbox (window size, minimized,
+capture request) and the thread's stop token. Shutdown order is swapchain (on the render
+thread) → device → window → platform: the device must go before the last Vulkan window,
+because SDL unloads the Vulkan library with it. From M2, `runtime` owns this wiring and the
+mailbox becomes the render snapshot.
 
 ## Network flow
 

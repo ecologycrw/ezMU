@@ -471,19 +471,23 @@ must be able to verify pixels without a human.
 
 ## Done when
 
-- [ ] `engine/rhi` module exists (`ezmu_add_module(NAME rhi LAYER 1 …)`), volk + VMA in
+- [x] `engine/rhi` module exists (`ezmu_add_module(NAME rhi LAYER 1 …)`), volk + VMA in
       `vcpkg.json`.
-- [ ] Public API above implemented, documented with thread rules, no Vulkan types in public
+- [x] Public API above implemented, documented with thread rules, no Vulkan types in public
       headers (checked by a new `architecture.rules` rule).
-- [ ] Headless GPU tests (validation guard + self-test, clear + readback, reference image,
+- [x] Headless GPU tests (validation guard + self-test, clear + readback, reference image,
       frames in flight) pass on lavapipe in Linux CI with ASan/UBSan and on the owner's GPU.
-- [ ] No validation errors or warnings in any test or in the sample.
+- [x] No validation errors or warnings in any test or in the sample.
 - [ ] **"Window clears the screen":** `ezmu_clear` opens a window via `platform`, renders on a
       dedicated render thread, clears to a solid color every frame with vsync, survives
       resize, minimize/restore and close without validation messages or leaks, and
       `--capture` writes a PNG of the presented image.
-- [ ] `engine/rhi/CLAUDE.md` and path-scoped rule `.claude/rules/rhi-vulkan.md` written.
-- [ ] Owner ran `ezmu_clear` on their machine and checked the window visually.
+      *(2026-11-15: all verified except minimize/restore, still to be checked by the owner.
+      Leaks: Vulkan objects are covered — validation reports undestroyed objects at teardown —
+      but CPU heap leaks are not checked for the sample: no LSan on Windows, and the sample
+      skips in Linux CI.)*
+- [x] `engine/rhi/CLAUDE.md` and path-scoped rule `.claude/rules/rhi-vulkan.md` written.
+- [x] Owner ran `ezmu_clear` on their machine and checked the window visually.
 
 ## M1 implementation plan
 
