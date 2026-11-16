@@ -1,6 +1,6 @@
 # Spec: platform
 
-- **Status:** Approved (2026-11-15, all proposals accepted)
+- **Status:** Implemented (M1, 2026-11-15; approved 2026-11-15, all proposals accepted)
 - **Layer:** L1
 - **Owner:** ecologycrw
 - **Related ADRs:** [0005](../adr/0005-target-platforms-and-compilers.md),
@@ -282,12 +282,10 @@ All tests run in CI on Windows and Linux without a display, using `VideoBackend:
 - [x] Headless tests pass on all CI presets (MSVC debug/release, Clang 19 ASan, GCC 14 ASan).
 - [x] `architecture.rules` still passes (SDL included only under `engine/platform`, and never
       in public headers).
-- [ ] The `ezmu_clear` sample opens a resizable window, reacts to close/resize/minimize, and
+- [x] The `ezmu_clear` sample opens a resizable window, reacts to close/resize/minimize, and
       the screen is cleared by the RHI (see [rhi spec](rhi.md#done-when)).
-      *(2026-11-15: close and resize verified; minimize still to be checked by the owner.)*
 - [x] `engine/platform/CLAUDE.md` and path-scoped rule `.claude/rules/platform.md` written.
-- [ ] Owner checked the sample on their machine (resize, minimize, DPI).
-      *(2026-11-15: resize checked; minimize and 150 % DPI pending.)*
+- [x] Owner checked the sample on their machine (resize, minimize, DPI) — 2026-11-15.
 
 ## Implementation notes (M1, differences from the sketch)
 

@@ -8,7 +8,7 @@ Repository, license, ADRs, build system (CMake + presets + vcpkg), `foundation` 
 sample app, formatting/static analysis/architecture checks, Claude Code rules and hooks, CI on
 Windows and Linux.
 
-## M1 — First pixels ✅ (implemented; final owner checks pending)
+## M1 — First pixels ✅
 
 Specs: [platform](specs/platform.md), [rhi](specs/rhi.md) (see their "Done when" lists).
 
@@ -21,11 +21,12 @@ Specs: [platform](specs/platform.md), [rhi](specs/rhi.md) (see their "Done when"
 - ✅ `foundation`: logging, geometry value types, `Image` + PNG I/O + image comparison
 - ✅ Path-scoped rules for `rhi` and `platform`; architecture rule against Vulkan/SDL in public
   headers
-- Pending owner checks: minimize/restore and 150 % DPI of `ezmu_clear` on a real desktop.
+- ✅ Owner checks on a real desktop: resize, minimize/restore, 150 % DPI
 
 Moved out of M1: the job system (not needed to draw the first pixels; it arrives with
-`runtime`/`assets` in M2). Follow-ups: Linux IME via IBus/Fcitx (SDL3 built without D-Bus),
-running `samples.clear` in Linux CI under Xvfb.
+`runtime`/`assets` in M2). Follow-ups: Linux IME via IBus/Fcitx (SDL3 built without D-Bus);
+running `samples.clear` in Linux CI under Xvfb, which also puts the sample under
+ASan/LeakSanitizer (today only Vulkan object leaks are checked for it, by validation).
 
 ## M2 — Runtime and render thread
 
