@@ -1,4 +1,4 @@
-# Architecture rule checks (ADR 0006, 0007, 0009, 0011). Portable: runs anywhere CMake runs.
+# Architecture rule checks (ADR 0006, 0007, 0008, 0009, 0011). Portable: runs anywhere CMake runs.
 #
 #   cmake -DEZMU_SOURCE_DIR=<repo root> -P scripts/checks/check_rules.cmake
 #
@@ -46,7 +46,7 @@ foreach(file IN LISTS build_files)
         "module build files must not reference vcpkg, use find_package() (ADR 0009)")
 endforeach()
 
-# --- Rules 2–4: include restrictions -----------------------------------------------------------
+# --- Rules 2–5: include restrictions -----------------------------------------------------------
 _ezmu_collect(source_files "*.hpp" "*.cpp" "*.h" "*.inl")
 set(include_prefix "^[ \t]*#[ \t]*include[ \t]*")
 
@@ -67,6 +67,12 @@ foreach(file IN LISTS source_files)
     if(file MATCHES "/include/")
         _ezmu_check_lines("${file}" "${include_prefix}\"[^\"]*(src/|\\.\\./)"
             "public headers must not include private sources or use relative parent paths (ADR 0011)")
+
+        # Rule 5: public headers never include Vulkan or SDL, not even inside engine/rhi and
+        # engine/platform; those modules expose ezMU types and opaque handles (ADR 0006, 0007, 0008).
+        _ezmu_check_lines("${file}"
+            "${include_prefix}[<\"](vulkan/|volk\\.h|vk_mem_alloc\\.h|SDL[0-9]*/)"
+            "public headers must not include Vulkan or SDL headers (ADR 0006, 0007, 0008)")
     endif()
 endforeach()
 

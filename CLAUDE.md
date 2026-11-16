@@ -24,8 +24,9 @@ Map: [docs/architecture/overview.md](docs/architecture/overview.md) · Decisions
 
 - Declare modules with `ezmu_add_module(NAME … LAYER …)`; configure fails on layer violations.
 - Public headers in `include/ezmu/<module>/`, private code in `src/`.
-- Vulkan headers only in `engine/rhi`; SDL headers only in `engine/platform`; module build files
-  never mention vcpkg (use `find_package`). Checked by `architecture.rules` test.
+- Vulkan headers only in `engine/rhi`; SDL headers only in `engine/platform`; never in any
+  public header (`include/`); module build files never mention vcpkg (use `find_package`).
+  Checked by `architecture.rules` test.
 - Errors: `ezmu::foundation::Result<T>`; no exceptions for control flow; `EZMU_ASSERT` for invariants.
 - No singletons / mutable globals (rare justified exceptions use `g_` and a NOLINT with reason).
 - Renderer never reads ECS/game state; it consumes render snapshots ([ADR 0012](docs/adr/0012-dedicated-render-thread.md)).

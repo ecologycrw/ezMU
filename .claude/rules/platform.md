@@ -7,9 +7,9 @@ paths:
 
 Source: ADR 0007, ADR 0012, [platform spec](../../docs/specs/platform.md).
 
-- SDL3 is used **only** here. No SDL header, type, enum value or handle in `include/`; translate
-  to ezMU types (`Scancode`, `Keycode`, `KeyMod`, `WindowId`, `Event`). Use pimpl (`Impl`) for
-  native handles.
+- SDL3 is used **only** here. No SDL header (enforced by `architecture.rules`), type, enum
+  value or handle in `include/`; translate to ezMU types (`Scancode`, `Keycode`, `KeyMod`,
+  `WindowId`, `Event`). Use pimpl (`Impl`) for native handles.
 - No dependency on `rhi`. The Vulkan boundary stays type-erased: instance extensions as strings,
   `createVulkanSurface(void*) → uint64_t`, `VulkanVoidFunction` for `vkGetInstanceProcAddr`.
 - Everything except `Clock` and `showMessageBox` is main-thread only; new entry points call

@@ -517,7 +517,8 @@ Each step is a small, verified Conventional Commit (`git commit -s`). Order matt
 8. **`feat(samples): ezmu_clear`** — window + render thread + mailbox, resize/minimize,
    `--frames/--capture`, `samples.clear` test.
 9. **`test(architecture): …`** — new rule: public headers of `rhi`/`platform` must not include
-   Vulkan/SDL headers (today rule 2/3 allow them anywhere inside the module).
+   Vulkan/SDL headers (today rule 2/3 allow them anywhere inside the module). *(Done as rule 5
+   of `scripts/checks/check_rules.cmake`, which covers every public header.)*
 10. **`docs: …`** — roadmap (M1 status, path-scoped rules done), overview, README build
     requirements (Vulkan SDK / validation layers, Linux packages).
 

@@ -8,7 +8,8 @@ paths:
 Source: ADR 0006, ADR 0012, ADR 0020, [rhi spec](../../docs/specs/rhi.md).
 
 - Vulkan, volk and VMA are used **only** here, and only in `src/` and `tests/`. Public headers
-  expose ezMU handles, value types and opaque raw handles (`void*`, `std::uint64_t`).
+  expose ezMU handles, value types and opaque raw handles (`void*`, `std::uint64_t`); a Vulkan,
+  volk or VMA include in `include/` fails the `architecture.rules` test.
 - Include Vulkan through `src/vulkan.hpp` only (`VK_NO_PROTOTYPES`, function pointers from volk).
 - Vulkan 1.3 idioms only: dynamic rendering (no `VkRenderPass`/`VkFramebuffer`),
   synchronization2 barriers, timeline semaphores for frame pacing.

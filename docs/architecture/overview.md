@@ -40,8 +40,9 @@ This document is the map of ezMU. The reasoning behind each part is in the
    ([cmake/EzmuModule.cmake](../../cmake/EzmuModule.cmake)). Configure fails if a module depends
    on a higher layer.
 3. Only public headers (`include/ezmu/<module>/`) may be included from outside a module.
-4. Vulkan headers only in `engine/rhi`; SDL headers only in `engine/platform`; vcpkg is never
-   referenced by module build files. Checked by
+4. Vulkan headers only in `engine/rhi`; SDL headers only in `engine/platform`, and never in
+   any public header (not even those modules' own `include/`); vcpkg is never referenced by
+   module build files. Checked by
    [scripts/checks/check_rules.cmake](../../scripts/checks/check_rules.cmake).
 5. Tools and Framework use only public APIs.
 6. The INTERFACE target `ezmu::engine` (declared with `ezmu_add_aggregate`) bundles every
